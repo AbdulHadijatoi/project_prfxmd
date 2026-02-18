@@ -417,7 +417,7 @@ class AjaxController extends Controller
         $sqlPl = "SELECT md5(user.id) as enc_id, user.fullname as fullname, trs.payment_id as id, trs.payment_amount as withdraw_amount, trs.payment_type as withdraw_type, trs.payment_status, trs.initiated_by as email, trs.created_at as withdraw_date
             FROM payment_logs trs
             LEFT JOIN aspnetusers user ON user.email = trs.initiated_by
-            WHERE trs.payment_type = 'NowPayment' AND trs.payment_reference_id = 'Wallet Withdrawal' AND trs.payment_status IN ('Pending', 'Initiated') " . $rmConditionPl;
+            " . $rmConditionPl . " AND trs.payment_type = 'NowPayment' AND trs.payment_reference_id = 'Wallet Withdrawal' AND trs.payment_status IN ('Pending', 'Initiated') ";
         $resultsPl = DB::select($sqlPl);
         foreach ($resultsPl as $row) {
             $data[] = [
@@ -874,11 +874,11 @@ addIpLog('getWalletTransfer', $data);
                 'action' => ' <a class="btn btn-sm btn-primary" href="/admin/wallet_withdrawal_details?id=' . md5($row->id) . '">View</a>'
             ];
         }
-        $rmConditionPl = app('permission')->appendRolePermissionsQry('trs', 'initiated_by');
+        $rmConditionPl = app('permission')->appendRolePermissionsQry('trs', 'initiated_by') . " (1=1) ";
         $sqlPl = "SELECT trs.payment_id as id, trs.payment_amount as withdraw_amount, trs.initiated_by as email, trs.created_at as withdraw_date, md5(user.id) as enc_id, user.fullname as fullname
             FROM payment_logs trs
             LEFT JOIN aspnetusers user ON user.email = trs.initiated_by
-            WHERE trs.payment_type = 'NowPayment' AND trs.payment_reference_id = 'Wallet Withdrawal' AND trs.payment_status IN ('Pending', 'Initiated') " . $rmConditionPl . " order by trs.payment_id desc";
+            " . $rmConditionPl . " AND trs.payment_type = 'NowPayment' AND trs.payment_reference_id = 'Wallet Withdrawal' AND trs.payment_status IN ('Pending', 'Initiated') order by trs.payment_id desc";
         $resultsPl = DB::select($sqlPl);
         foreach ($resultsPl as $row) {
             $data[] = [
