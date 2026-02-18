@@ -39,4 +39,8 @@ return [
 		'exp_buffer'  => env('MT5_TOKEN_EXP_BUFFER', 5),
 	],
 
+	'nowpayments' => [
+		'email' => env('NOWPAYMENTS_EMAIL', ''),
+	],
+
 ];
