@@ -8,14 +8,20 @@ use App\Models\WalletDeposit;
 use App\Models\TotalBalance;
 use App\Models\IbWithdraw;
 use App\Models\IbWallet;
+use App\Models\PaymentLog;
+use App\Models\ClientWallets;
 use App\Services\MailService as MailService;
+use App\Services\PayoutService;
 
 class Transaction extends Controller
 {
     protected $mailService;
-    public function __construct(MailService $mailService)
+    protected $payoutService;
+
+    public function __construct(MailService $mailService, PayoutService $payoutService)
     {
         $this->mailService = $mailService;
+        $this->payoutService = $payoutService;
     }
     public function index(Request $request)
     {
@@ -91,12 +97,76 @@ class Transaction extends Controller
     public function wallet_withdrawal_details(Request $request)
     {
         if (request()->has('id') && !empty(request()->id)) {
+            $id = request()->id;
+            if (str_starts_with($id, 'pl_')) {
+                $hash = substr($id, 3);
+                $paymentLog = PaymentLog::whereRaw('md5(payment_id) = ?', [$hash])->first();
+                if (!$paymentLog || !in_array($paymentLog->payment_status, ['Pending', 'Initiated'])) {
+                    return view('admin.wallet_withdrawal_details', ['details' => null]);
+                }
+                $user = \App\Models\User::where('email', $paymentLog->initiated_by)->first();
+                $walletName = $walletCurrency = $walletNetwork = $walletAddress = '';
+                if ($paymentLog->payment_to && is_numeric($paymentLog->payment_to)) {
+                    $cw = ClientWallets::where('client_wallet_id', $paymentLog->payment_to)->first();
+                    if ($cw) {
+                        $walletName = $cw->wallet_name ?? '';
+                        $walletCurrency = $cw->wallet_currency ?? '';
+                        $walletNetwork = $cw->wallet_network ?? '';
+                        $walletAddress = $cw->wallet_address ?? '';
+                    }
+                } else {
+                    $walletAddress = $paymentLog->payment_to ?? '';
+                }
+                $details = (object) [
+                    'id' => $paymentLog->payment_id,
+                    'email' => $paymentLog->initiated_by,
+                    'fullname' => $user ? $user->fullname : $paymentLog->initiated_by,
+                    'number' => $user ? $user->number : '',
+                    'withdraw_amount' => $paymentLog->payment_amount,
+                    'withdraw_type' => 'Now Payment (Pending)',
+                    'withdraw_date' => $paymentLog->created_at ?? now(),
+                    'Status' => 0,
+                    'wallet_name' => $walletName,
+                    'wallet_currency' => $walletCurrency,
+                    'wallet_network' => $walletNetwork,
+                    'wallet_address' => $walletAddress,
+                    'currency_type' => '',
+                    'approved_name' => null,
+                    'transaction_id' => null,
+                    'AdminRemark' => null,
+                    'Js_Admin_Remark_Date' => null,
+                    'parent_ib' => null,
+                    'parent_ib_email' => null,
+                    'rm_id' => null,
+                    'rm_name' => null,
+                    'bankName' => null,
+                    'accountNumber' => null,
+                    'ClientName' => null,
+                    'code' => null,
+                    'swift_code' => null,
+                ];
+                $details->totalDeposit = $this->getTotalDeposit($details->email);
+                $details->totalWithdrawal = $this->getTotalWithdrawal($details->email);
+                $datalogs = [
+                    'action' => 'Client Wallet Withdrawal Details Viewed (Payment Log)',
+                    'withdraw_id' => $paymentLog->payment_id,
+                    'email' => $details->email,
+                    'amount' => $details->withdraw_amount,
+                    'status' => 'success',
+                    'admin_email' => session('alogin'),
+                    'role_id' => session('userData.role_id') ?? null,
+                    'ip_address' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                    'timestamp' => now(),
+                ];
+                addIpLog('Client Wallet Withdrawal Details Viewed', $datalogs);
+                return view('admin.wallet_withdrawal_details', compact('details'));
+            }
             DB::enableQueryLog();
             $details = DB::table('wallet_withdraw as wd')
                 ->leftJoin('clientbankdetails as cbd', 'wd.client_bank', '=', 'cbd.id')
                 ->leftJoin('client_wallets as cw', 'wd.wallet_id', '=', 'cw.client_wallet_id')
                 ->leftJoin('aspnetusers as u', 'wd.email', '=', 'u.email')
-                // ->leftJoin('total_balance as tb', 'u.email', '=', 'tb.email')
                 ->leftJoin('relationship_manager as r', 'wd.email', '=', 'r.user_id')
                 ->leftJoin('emplist as emp', 'r.rm_id', '=', 'emp.email')
                 ->leftJoin('emplist', 'wd.admin_email', '=', 'emplist.email')
@@ -123,9 +193,9 @@ class Transaction extends Controller
             }
              $datalogs = [
                 'action'          => 'Client Wallet Withdrawal Details Viewed',
-                'withdraw_id'     => $details->id,
-                'email'           => $details->email,
-                'amount'          => $details->amount ?? null,
+                'withdraw_id'     => $details->id ?? null,
+                'email'           => $details->email ?? null,
+                'amount'          => $details->withdraw_amount ?? null,
                 'status'          => 'success',
                 'admin_email'     => session('alogin'),
                 'role_id'         => session('userData.role_id') ?? null,
@@ -312,7 +382,6 @@ class Transaction extends Controller
     }
     public function update_wallet_withdrawal(Request $request)
     {
-       
         $settings = settings();
         $validatedData = $request->validate([
             'description' => 'required|string|max:255',
@@ -324,8 +393,23 @@ class Transaction extends Controller
         $status = $validatedData['status'];
         $email = $validatedData['email'];
         $depositAmount = $validatedData['amount'];
-        $did = $request->input('id');
+        $did = $request->input('id') ?? $request->query('id');
         $transaction_id = $request->input('transaction_id');
+
+        if ($did && str_starts_with($did, 'pl_')) {
+            $hash = substr($did, 3);
+            $paymentLog = PaymentLog::whereRaw('md5(payment_id) = ?', [$hash])->first();
+            if (!$paymentLog || $paymentLog->initiated_by !== $email) {
+                return redirect()->back()->with('error', 'Transaction Not Found');
+            }
+            if ($status == 1) {
+                $this->payoutService->approveWithdrawal($paymentLog->payment_id, true, $transaction_id, $description);
+                return redirect()->back()->with('success', 'Withdrawal Approved Successfully');
+            }
+            $this->payoutService->rejectWithdrawal($paymentLog->payment_id, $description);
+            return redirect()->back()->with('success', 'Withdrawal Rejected Successfully');
+        }
+
         $transaction = WalletWithdraw::whereRaw('md5(id) = ?', [$did])->first();
         if ($transaction) {
             $transaction->AdminRemark = $description;

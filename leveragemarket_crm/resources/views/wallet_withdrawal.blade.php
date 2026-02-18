@@ -152,6 +152,29 @@
                                                                 </div>
                                                             </div>
                                                         </div>
+                                                        @if (!empty($user_groups['now_payment_api']) && isset($user_groups['now_payment_status']) && $user_groups['now_payment_status'] == 1)
+                                                            <div class="col-md-3 col-lg-4 col-xl-4">
+                                                                <div class="address-check border rounded">
+                                                                    <div class="form-check">
+                                                                        <input type="radio" name="withdraw_type"
+                                                                            class="form-check-input input-primary wallet-withdraw"
+                                                                            id="option_nowpayment_withdraw" value="1" data-type="NowPayment_Withdrawal">
+                                                                        <label class="form-check-label d-block" for="option_nowpayment_withdraw">
+                                                                            <span class="card-body p-2 d-block">
+                                                                                <span class="d-flex flex-wrap align-items-center justify-content-between">
+                                                                                    <span>Crypto Withdrawal</span>
+                                                                                    <span>
+                                                                                        <span class="h6 f-w-500 mb-1 d-block">
+                                                                                            <img src="/assets/images/nowpayments-white.png" alt="Now Payment" style="height: 30px;">
+                                                                                        </span>
+                                                                                    </span>
+                                                                                </span>
+                                                                            </span>
+                                                                        </label>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        @endif
                                                     </div>
                                                     <div class="divider my-4"><span>WITHDRAW DETAILS</span></div>
                                                     <div class="wallet-withdrawal Wallet_Withdrawal">
@@ -470,6 +493,135 @@
                                                         </form>
                                                     </div>
 
+                                                    <div class="wallet-withdrawal NowPayment_Withdrawal" style="display:none">
+                                                        <form method="post" style="padding:10px;"
+                                                            class="md-float-material form-material withdrawForm">
+                                                            @csrf
+                                                            <div class="row">
+                                                                <input type="hidden" name="withdraw_type" value="Now Payment">
+                                                                <div class="col-12 mt-2">
+                                                                    <div class="form-group row">
+                                                                        <label class="col-lg-4 col-form-label">
+                                                                            SELECT WALLET ACCOUNT:
+                                                                            <small class="text-muted d-block">
+                                                                                Please select the Wallet account to which
+                                                                                you wish to transfer your funds
+                                                                            </small>
+                                                                        </label>
+                                                                        <div class="col-lg-8">
+                                                                            @if (count($client_wallets) == 0)
+                                                                                <div class="form-group">
+                                                                                    <button type="button"
+                                                                                        class="btn btn-primary"
+                                                                                        data-bs-toggle="modal"
+                                                                                        data-bs-target="#addWalletModal">
+                                                                                        <i class="ti ti-plus f-18"></i> Add
+                                                                                        Wallet Information
+                                                                                    </button>
+                                                                                </div>
+                                                                            @else
+                                                                                <select name="client_bank" required
+                                                                                    id="nowpayment-wallet-account-select"
+                                                                                    class="form-control fill nowpayment-wallet-select"
+                                                                                    style="color:black;">
+                                                                                    @foreach ($client_wallets as $bank)
+                                                                                        <option
+                                                                                            value="{{ $bank->client_wallet_id }}"
+                                                                                            data-address="{{ $bank->wallet_address ?? '' }}">
+                                                                                            {{ $bank->wallet_name }} /
+                                                                                            {{ $bank->wallet_currency }} /
+                                                                                            {{ $bank->wallet_network }}
+                                                                                        </option>
+                                                                                    @endforeach
+                                                                                </select>
+                                                                                <div id="nowpayment-wallet-address-hint" class="mt-2 small text-muted border border-success rounded p-2" style="display: none;">
+                                                                                    <span class="d-flex align-items-center">
+                                                                                        <i class="ti ti-circle-check text-success me-2 f-20"></i>
+                                                                                        <span><span class="text-muted">Address:</span> <span id="nowpayment-wallet-address-value"></span></span>
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-2">
+                                                                                    <div id="nowpayment-wallet-address-confirm-wrap" class="form-check mb-0" style="display: none;">
+                                                                                        <input type="checkbox" class="form-check-input" id="nowpayment-wallet-address-confirm">
+                                                                                        <label class="form-check-label small" for="nowpayment-wallet-address-confirm" style="cursor: pointer;">I confirm that the wallet address is correct.</label>
+                                                                                    </div>
+                                                                                    <small data-bs-toggle="modal"
+                                                                                        data-bs-target="#addWalletModal"
+                                                                                        style="color: var(--primary-color); cursor: pointer;">
+                                                                                        + Add another wallet
+                                                                                    </small>
+                                                                                </div>
+                                                                            @endif
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="form-group row">
+                                                                        <label class="col-lg-4 col-form-label">
+                                                                            Your Wallet Balance:
+                                                                            <small class="text-muted d-block">(USD)</small>
+                                                                        </label>
+                                                                        <div class="col-lg-8">
+                                                                            <div class="input-group mb-3">
+                                                                                <input type="number"
+                                                                                    name="wallet_balance"
+                                                                                    value="{{ $wallet_balance }}" readonly
+                                                                                    class="form-control fill wallet_balance">
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="form-group row">
+                                                                        <label class="col-lg-4 col-form-label">
+                                                                            ENTER AMOUNT:
+                                                                            <small class="text-muted d-block">Please enter
+                                                                                the amount that you need to withdraw</small>
+                                                                        </label>
+                                                                        <div class="col-lg-8">
+                                                                            <div class="input-group mb-3">
+                                                                                <span class="input-group-text">$</span>
+                                                                                <input type="number" class="form-control withdraw_amount"
+                                                                                    name="withdraw_amount" min="10"
+                                                                                    aria-label="Amount (to the nearest dollar)"
+                                                                                    @if (count($client_wallets) > 0) required @endif>
+                                                                                <span class="input-group-text">.00</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="row">
+                                                                <div class="col-12 mt-2">
+                                                                    <div class="form-group row">
+                                                                        <label class="col-lg-4 col-form-label">Verification OTP :</label>
+                                                                        <div class="col-lg-8">
+                                                                            <div class="input-group mb-3">
+                                                                                <span class="input-group-text otp-req" data-type="Now Payment">Send OTP</span>
+                                                                                <input type="number"
+                                                                                    class="form-control"
+                                                                                    name="otp" disabled required data-type="Now Payment">
+                                                                                <span class="input-group-text">
+                                                                                    <i class="feather icon-info mb-auto mt-auto"
+                                                                                        data-bs-toggle="tooltip"
+                                                                                        data-bs-placement="top"
+                                                                                        title="You will receive OTP on your registered email address"></i>
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            @if (count($client_wallets) > 0)
+                                                                <div class="row">
+                                                                    <div class="col-lg-4"></div>
+                                                                    <div class="col-lg-8">
+                                                                        <div class="row g-1">
+                                                                            <input type="submit" name="wallet_withdraw"
+                                                                                class="btn btn-primary col-12"
+                                                                                value="Withdraw From Wallet">
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            @endif
+                                                        </form>
+                                                    </div>
                                                     <div class="wallet-withdrawal Bank_Withdrawal" style="display:none">
                                                         <form method="post" style="padding:10px;"
                                                             class="md-float-material form-material withdrawForm">
@@ -887,6 +1039,17 @@
 					return false;
 				}
 			}
+			if (withdrawType === 'Now Payment') {
+				if (!$('#nowpayment-wallet-address-confirm').is(':checked')) {
+					e.preventDefault();
+					Swal.fire({
+						icon: 'warning',
+						title: 'Confirmation required',
+						text: 'Please confirm that the wallet address is correct.'
+					});
+					return false;
+				}
+			}
 			e.preventDefault();
 			
 			$btn.html(
@@ -1087,6 +1250,28 @@
 		}
 		$('#wallet-account-select').on('change', updateWalletAddressHint);
 		$(document).ready(updateWalletAddressHint);
+
+		// Now Payment wallet address hint (same as Crypto withdrawal)
+		function updateNowPaymentWalletAddressHint() {
+			var $select = $('#nowpayment-wallet-account-select');
+			var $hint = $('#nowpayment-wallet-address-hint');
+			var $confirmWrap = $('#nowpayment-wallet-address-confirm-wrap');
+			var $value = $('#nowpayment-wallet-address-value');
+			if ($select.length && $hint.length) {
+				var address = $select.find('option:selected').attr('data-address') || '';
+				if (address) {
+					$value.text(address);
+					$hint.show();
+					$confirmWrap.show();
+				} else {
+					$hint.hide();
+					$confirmWrap.hide();
+					$('#nowpayment-wallet-address-confirm').prop('checked', false);
+				}
+			}
+		}
+		$('#nowpayment-wallet-account-select').on('change', updateNowPaymentWalletAddressHint);
+		$(document).ready(updateNowPaymentWalletAddressHint);
 
 		// Bank account number hint below bank account dropdown (Bank withdrawal)
 		function updateBankAccountHint() {
