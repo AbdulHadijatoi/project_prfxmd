@@ -402,8 +402,12 @@ class Transaction extends Controller
                 return redirect()->back()->with('error', 'Transaction Not Found');
             }
             if ($status == 1) {
-                $this->payoutService->approveWithdrawal($paymentLog->payment_id, true, $transaction_id, $description);
-                return redirect()->back()->with('success', 'Withdrawal Approved Successfully');
+                try {
+                    $this->payoutService->approveWithdrawal($paymentLog->payment_id, true, $transaction_id, $description);
+                    return redirect()->back()->with('success', 'Withdrawal Approved Successfully');
+                } catch (\Exception $e) {
+                    return redirect()->back()->with('error', 'Payout failed: ' . $e->getMessage());
+                }
             }
             $this->payoutService->rejectWithdrawal($paymentLog->payment_id, $description);
             return redirect()->back()->with('success', 'Withdrawal Rejected Successfully');
