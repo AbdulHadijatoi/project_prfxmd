@@ -530,7 +530,7 @@ class Wallet extends Controller
 
         if ($withdrawType === 'Now Payment') {
             $wallet = ClientWallets::where('client_wallet_id', $clientBank)->where('user_id', $userEmail)->first();
-            $paymentTo = $wallet ? ($wallet->wallet_address ?? (string) $clientBank) : (string) $clientBank;
+            $paymentTo = (string) $clientBank;
             $paymentLog = $this->payoutService->createWithdrawalRequest($userEmail, (float) $withdrawAmount, $paymentTo, 'NowPayment');
             addIpLog('Wallet Withdrawal NowPayment Request', [
                 'email' => $userEmail,
@@ -538,8 +538,12 @@ class Wallet extends Controller
                 'payment_id' => $paymentLog->payment_id,
             ]);
             if ($withdrawAmount <= 200) {
-                $this->payoutService->approveWithdrawal($paymentLog->payment_id, false);
-                return redirect()->back()->with('success', 'Withdrawal approved. You will receive a confirmation email shortly.');
+                try {
+                    $this->payoutService->approveWithdrawal($paymentLog->payment_id, false);
+                    return redirect()->back()->with('success', 'Withdrawal approved. You will receive a confirmation email shortly.');
+                } catch (\Exception $e) {
+                    return redirect()->back()->with('error', 'Payout could not be processed: ' . $e->getMessage());
+                }
             }
             $pusherData = [
                 'type' => 'Wallet Withdrawal',
