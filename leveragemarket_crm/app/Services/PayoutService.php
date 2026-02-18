@@ -89,7 +89,7 @@ class PayoutService
             if (empty($apiKey)) {
                 throw new \Exception('NowPayments API key is not configured for this user\'s group.');
             }
-            $payoutResponse = $this->createNowPaymentsPayout($paymentLog, $clientWallet->wallet_address, $currency, $apiKey);
+            $payoutResponse = $this->createNowPaymentsPayout($paymentLog, $clientWallet->wallet_address, $currency, $userGroup);
             $paymentLog->update([
                 'payment_res' => is_array($payoutResponse) ? json_encode($payoutResponse) : (string) $payoutResponse,
             ]);
@@ -135,13 +135,47 @@ class PayoutService
     }
 
     /**
+     * Get JWT for NowPayments Mass Payout API (auth with email + password).
+     *
+     * @throws \Exception When email/password missing or auth fails
+     */
+    protected function getNowPaymentsJwt(UserGroup $userGroup): string
+    {
+        $email = config('services.nowpayments.email', '');
+        $password = $userGroup->now_payment_security ?? '';
+        if (empty($email) || empty($password)) {
+            throw new \Exception('NowPayments JWT requires NOWPAYMENTS_EMAIL in .env and Security Key set in the user group.');
+        }
+        $response = Http::withHeaders([
+            'Content-Type' => 'application/json',
+            'x-api-key' => $userGroup->now_payment_api,
+        ])->post('https://api.nowpayments.io/v1/auth', [
+            'email' => $email,
+            'password' => $password,
+        ]);
+        if (!$response->successful()) {
+            $body = $response->json();
+            $message = $body['message'] ?? $body['err'] ?? $response->body();
+            throw new \Exception('NowPayments auth failed: ' . (is_string($message) ? $message : json_encode($message)));
+        }
+        $data = $response->json();
+        $token = $data['token'] ?? $data['access_token'] ?? null;
+        if (empty($token)) {
+            throw new \Exception('NowPayments auth did not return a token.');
+        }
+        return $token;
+    }
+
+    /**
      * Create a payout via NowPayments API (batch format with a single withdrawal).
+     * Uses JWT Bearer token for authorization.
      *
      * @return array Decoded JSON response (contains id and withdrawals array)
      * @throws \Exception On HTTP or API error
      */
-    protected function createNowPaymentsPayout(PaymentLog $paymentLog, string $address, string $currency, string $apiKey): array
+    protected function createNowPaymentsPayout(PaymentLog $paymentLog, string $address, string $currency, UserGroup $userGroup): array
     {
+        $jwt = $this->getNowPaymentsJwt($userGroup);
         $settings = settings();
         $baseUrl = $settings['copyright_site_name_text'] ?? '';
         $withdrawal = [
@@ -164,7 +198,8 @@ class PayoutService
         }
         $response = Http::withHeaders([
             'Content-Type' => 'application/json',
-            'x-api-key' => $apiKey,
+            'x-api-key' => $userGroup->now_payment_api,
+            'Authorization' => 'Bearer ' . $jwt,
         ])->post('https://api.nowpayments.io/v1/payout', $payload);
 
         if (!$response->successful()) {
