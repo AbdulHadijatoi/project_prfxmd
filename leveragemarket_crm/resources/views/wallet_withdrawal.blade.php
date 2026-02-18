@@ -152,7 +152,7 @@
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        @if (!empty(config('services.binance.api_key')))
+                                                        @if (false && !empty(config('services.binance.api_key')))
                                                             <div class="col-md-3 col-lg-4 col-xl-4">
                                                                 <div class="address-check border rounded">
                                                                     <div class="form-check">
