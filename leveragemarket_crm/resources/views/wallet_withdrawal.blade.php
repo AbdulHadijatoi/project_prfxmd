@@ -162,7 +162,7 @@
                                                                         <label class="form-check-label d-block" for="option_nowpayment_withdraw">
                                                                             <span class="card-body p-2 d-block">
                                                                                 <span class="d-flex flex-wrap align-items-center justify-content-between">
-                                                                                    <span>Crypto Payment</span>
+                                                                                    <span>Crypto Withdrawal</span>
                                                                                     <span>
                                                                                         <span class="h6 f-w-500 mb-1 d-block">
                                                                                             <img src="/assets/images/nowpayments-white.png" alt="Now Payment" style="height: 30px;">
