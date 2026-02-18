@@ -824,24 +824,15 @@ $datalog = [
                 ];
                 
                 $this->mailService->sendEmail($email, $emailSubject, '', '', $templateVars);
-                return redirect()->back()->with('success', 'Bonus Applied Successfully');                		
+                //return redirect()->back()->with('success', 'Bonus Applied Successfully');                		
 			}
-
 			DB::commit();
-
-			return response()->json([
-				'status' => true,
-				'message' => 'Bonus applied successfully!'
-			]);
+			return redirect()->back()->with('success', 'Bonus Applied Successfully');      
 
 		} catch (\Exception $e) {
 			
 			DB::rollBack();
-
-			return response()->json([
-				'status' => false,
-				'message' => $e->getMessage()
-			]);
+			return redirect()->back()->with('error', 'Bonus Not Applied Successfully! Contact Site Admin.');
 		}
 	}
 

@@ -888,7 +888,7 @@
 															<th>Currency</th>
 															<th>Method</th>
 															<th>Status</th>
-															<th>Action</th>
+															{{-- <th>Action</th> --}}
 														</tr>
 													</thead>
 													<tbody>
@@ -908,7 +908,7 @@
 															<td class="{{ $row->Status == 0 ? 'text-warning' : ($row->Status == 1 ? 'text-success' : 'text-danger') }}">
 																<p>{{ $row->Status == 0 ? 'Pending' : ($row->Status == 1 ? 'Success' : 'Rejected') }}</p>
 															</td>
-															<td></td>
+															{{-- <td></td> --}}
 														</tr>
 														@endforeach
 													</tbody>

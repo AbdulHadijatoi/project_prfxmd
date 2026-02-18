@@ -81,23 +81,23 @@ document.addEventListener('keydown', function (e) {
     }
 });
 
-// (function () {
+(function () {
 
-//     let triggered = false;
+    let triggered = false;
 
-//     setInterval(function () {
-//         if (window.outerWidth - window.innerWidth > 160 ||
-//             window.outerHeight - window.innerHeight > 160) {
+    setInterval(function () {
+        if (window.outerWidth - window.innerWidth > 160 ||
+            window.outerHeight - window.innerHeight > 160) {
 
-//             if (!triggered) {
-//                 triggered = true;
-//                 window.location.href = "{{ route('logout') }}";
-//             }
+            if (!triggered) {
+                triggered = true;
+                window.location.href = "{{ route('logout') }}";
+            }
 
-//         }
-//     }, 1000);
+        }
+    }, 1000);
 
-// })();
+})();
 </script>
     @yield('styles')
     <style>

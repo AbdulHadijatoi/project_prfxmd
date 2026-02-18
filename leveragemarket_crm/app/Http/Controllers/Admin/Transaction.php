@@ -82,7 +82,6 @@ class Transaction extends Controller
             }
               $datalogs = [
                 'action'          => 'Client Wallet Deposit Details Viewed',
-               
                 'status'          => 'not_found',
                 'admin_email'     => session('alogin'),
                 'role_id'         => session('userData.role_id') ?? null,

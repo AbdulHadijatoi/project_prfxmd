@@ -210,7 +210,7 @@
 									<th>Currency</th>
 									<th>Method</th>
 									<th>Status</th>
-									<th>Action</th>
+									{{-- <th>Action</th> --}}
 								</tr>
 							</thead>
 							<tbody>
@@ -230,7 +230,7 @@
 									<td class="{{ $row->Status == 0 ? 'text-warning' : ($row->Status == 1 ? 'text-success' : 'text-danger') }}">
 										<p>{{ $row->Status == 0 ? 'Pending' : ($row->Status == 1 ? 'Success' : 'Rejected') }}</p>
 									</td>
-									@if($row->Status == 0)
+									{{-- @if($row->Status == 0)
 											<td>
 												<span class="cancelPayment"
 														data-id="{{ $row->id }}" data-particulars="{{ $row->particulars }}">
@@ -248,7 +248,7 @@
 											</td>
 											@else
 											<td>-</td>
-											@endif
+											@endif --}}
 								</tr>
 								@endforeach
 							</tbody>
@@ -290,8 +290,8 @@
     let id = $(this).data('id');
 	 let particulars = $(this).data('particulars');
     let row = $(this).closest('tr');
-	alert(id);
-alert(particulars);
+// 	alert(id);
+// alert(particulars);
     Swal.fire({
         title: 'Are you sure?',
         text: "You want to cancel this payment!",
