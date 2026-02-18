@@ -53,7 +53,7 @@
                         title: "#"
                     },
                     {
-                        data: "fullname",
+                        data: "display_name",
                         title: "Name"
                     },
                     {

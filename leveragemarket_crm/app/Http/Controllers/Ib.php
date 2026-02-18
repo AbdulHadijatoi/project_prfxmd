@@ -928,6 +928,7 @@ class Ib extends Controller
             ->groupBy('ib_wallet.order_id')
 			->orderBy('ib1_commission.time_closed', 'desc')
             ->get();
+			echo'<pre>';print_r($histories);exit;
         echo json_encode(value: ['data' => $histories]);
     }
 }

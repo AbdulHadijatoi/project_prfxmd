@@ -140,22 +140,45 @@ class ApiAjaxController extends Controller
         $ibUpdate = Ib1::where(DB::raw('md5(email)'), $clientId)
             ->update(['status' => $ibStatus, 'acc_type' => $ibGroup]);
 
+               $datalogs = [
+        'client_id' => $clientId,
+        'ib_status' => $ibStatus,
+        'ib_group'  => $ibGroup,
+        'updated'   => $ibUpdate,
+        'ip'        => request()->ip(),
+        'time'      => now()
+    ];
+
+    addIpLog('handleClientRequest', $datalogs);
+
         return response()->json($ibUpdate ? 'true' : 'false');
     }
 
     private function createIbPlan($request)
     {
+
+    $datalogs = [
+        'ib_cat_name' => $request->ib_cat_name,
+            'ib_cat_desc' => $request->ib_cat_desc,
+            'is_active' => $request->is_active
+    ];
         $ibPlan = IBCategory::create([
             'ib_cat_name' => $request->ib_cat_name,
             'ib_cat_desc' => $request->ib_cat_desc,
             'is_active' => $request->is_active
         ]);
-
+ addIpLog('createIbPlan', $datalogs);
         return response()->json($ibPlan ? 'true' : 'false');
     }
 
     private function updateGroupMain($request)
     {
+
+    $datalogs = [ 'mt5_group_name' => $request->mt5_group_name,
+                'mt5_group_desc' => $request->mt5_group_desc,
+                'is_active' => $request->is_active,
+                'updated_by' => session('alogin'),
+                'user_group_id' => $request->user_group_id];
         $updated = Mt5Group::where(DB::raw('md5(mt5_group_id)'), $request->id)
             ->update([
                 'mt5_group_name' => $request->mt5_group_name,
@@ -164,12 +187,20 @@ class ApiAjaxController extends Controller
                 'updated_by' => session('alogin'),
                 'user_group_id' => $request->user_group_id
             ]);
-
+ addIpLog('updateGroupMain', $datalogs);
         return response()->json($updated ? 'true' : 'false');
     }
 
     private function createGroupMain($request)
     {
+        $datalogs = [
+            'mt5_group_name' => $request->mt5_group_name,
+            'mt5_group_type' => $request->mt5_group_type,
+            'mt5_group_desc' => $request->mt5_group_desc,
+            'is_active' => $request->is_active,
+            'updated_by' => session('alogin'),
+            'user_group_id' => $request->user_group_id
+        ];
         $group = Mt5Group::create([
             'mt5_group_name' => $request->mt5_group_name,
             'mt5_group_type' => $request->mt5_group_type,
@@ -178,7 +209,7 @@ class ApiAjaxController extends Controller
             'updated_by' => session('alogin'),
             'user_group_id' => $request->user_group_id
         ]);
-
+ addIpLog('createGroupMain', $datalogs);
         return response()->json($group ? 'true' : 'false');
     }
 
@@ -286,6 +317,25 @@ class ApiAjaxController extends Controller
                             // Store image in public disk
                             $file->storeAs($folder, $imageName, 'public');
                         }
+                        $datalogs = [
+                            'ac_type' => $request->input('ac_type'),
+                        'ac_name' => $request->input('ac_name'),
+                        'ac_group' => $ac_group,
+                        'ac_min_deposit' => $request->input('ac_min_deposit'),
+                        'ac_max_leverage' => $request->input('ac_max_leverage'),
+                        'ac_spread' => $request->input('ac_spread'),
+                        'ac_swap' => $request->input('ac_swap'),
+                        'status' => $request->input('status'),
+                        'ib_enabled' => $request->input('ib_enabled'),
+                        'ac_category' => $request->input('ac_category'),
+                        'ac_book_type' => $request->input('ac_book_type'),
+                        'is_client_group' => $is_client_group,
+                        'user_group_id' => $userGroup->user_group_id,
+                        'display_priority'=>$request->input('display_priority'),
+                        'inquiry_status'=>$inquiry_status,
+                        'image'=> $imageName,
+                        'ac_description' =>$request->input('ac_description')
+                        ];
                     $accountTypeId = DB::table('account_types')->insertGetId([
                         'ac_type' => $request->input('ac_type'),
                         'ac_name' => $request->input('ac_name'),
@@ -311,6 +361,7 @@ class ApiAjaxController extends Controller
                             'account_leverage' => $lev
                         ]);
                     }
+                    addIpLog('createGroup', $datalogs);
                     return response()->json(['success' => true]);
                 } catch (Exception $e) {
                     dd($e);
@@ -383,7 +434,19 @@ class ApiAjaxController extends Controller
                         'account_leverage' => $lev
                     ]);
                 }
+  $datalogs = [
+                'ac_index_md5'     => $request->ac_index,
+                'ac_index'         => $accountType->ac_index,
+                'ac_name'          => $accountType->ac_name,
+                'display_priority' => $accountType->display_priority,
+                'status'           => $accountType->status,
+                'user_group_id'    => $accountType->user_group_id,
+                'leverage_values'  => $request->ac_max_leverage,
+                'updated_by_ip'    => request()->ip(),
+                'updated_at'       => now()
+            ];
 
+            addIpLog('updateGroup', $datalogs);
                 return response()->json('true');
             }
             return response()->json(["status" => 'false', "message" => "Group is not Exist"]);
@@ -400,7 +463,15 @@ class ApiAjaxController extends Controller
             IbPlanDetails::where('ib_plan_cat_id', $request->ib_plan_cat_id)
                 ->where('ib_acc_type_id', $request->ib_acc_type_id)
                 ->update(['status' => 0, 'updated_by' => session('alogin'), 'deleted_at' => now()]);
-
+$datalogs = [
+    'ib_acc_type_id' => $request->ib_acc_type_id,
+                'ib_plan_cat_id' => $request->ib_plan_cat_id,
+                'ib_plan_code' => $request->ib_plan_code,
+                'ib_plan_amount' => $request->ib_plan_amount,
+                'ib_plan_type' => $request->ib_plan_type,
+                'ib_plan_desc' => $request->ib_plan_desc,
+                'updated_by' => session('alogin')
+];
             IbPlanDetails::create([
                 'ib_acc_type_id' => $request->ib_acc_type_id,
                 'ib_plan_cat_id' => $request->ib_plan_cat_id,
@@ -412,6 +483,7 @@ class ApiAjaxController extends Controller
             ]);
 
             DB::commit();
+             addIpLog('updateGroup', $datalogs);
             return response()->json('true');
         } catch (Exception $e) {
             DB::rollBack();
@@ -428,6 +500,18 @@ class ApiAjaxController extends Controller
         $headers = "MIME-Version: 1.0" . "\r\n";
         $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
         $headers .= 'From:' . $settings['admin_title'] . '<' . $from . '>' . "\r\n";
+        $datalogs = [
+             'name' => $new_user->Name,
+            'type' => $type,
+            'trade_id' => $new_user->Login,
+            'trader_pwd' => $new_user->MainPassword,
+            'investor_pwd' => $new_user->InvestPassword,
+            'leverage' => "1:" . $new_user->Leverage,
+            'server_name' => $settings['mt5_company_name'],
+            'email' => $settings['email_from_address'],
+            "title_right" => "Get Started With",
+            "subtitle_right" => "New " . $type . " MT5 Account"
+        ];
         $templateVars = [
             'name' => $new_user->Name,
             'type' => $type,
@@ -440,6 +524,7 @@ class ApiAjaxController extends Controller
             "title_right" => "Get Started With",
             "subtitle_right" => "New " . $type . " MT5 Account"
         ];
+        addIpLog('sendMail', $datalogs);
         $this->mailService->sendEmail($toEmail, $emailSubject, $headers, '', $templateVars);
     }
     public function liveaccountCreation(Request $request)
@@ -506,6 +591,32 @@ class ApiAjaxController extends Controller
         }
 
         // Save live account details to the database
+        $datalogs = [
+             'email' => $user->email,
+            'name' => $newUser->Name,
+            'trade_id' => $newUser->Login,
+            'account_type' => $accType,
+            'leverage' => $leverage,
+            'currency' => "USD",
+            'trader_pwd' => $newUser->MainPassword,
+            'invester_pwd' => $newUser->InvestPassword,
+            'phone_pwd' => $newUser->PhonePassword,
+            'ib1' => $newUser->LeadSource,
+            'ib2' => $user->ib2,
+            'ib3' => $user->ib3,
+            'ib4' => $user->ib4,
+            'ib5' => $user->ib5,
+            'ib6' => $user->ib6,
+            'ib7' => $user->ib7,
+            'ib8' => $user->ib8,
+            'ib9' => $user->ib9,
+            'ib10' => $user->ib10,
+            'ib11' => $user->ib11,
+            'ib12' => $user->ib12,
+            'ib13' => $user->ib13,
+            'ib14' => $user->ib14,
+            'ib15' => $user->ib15
+        ];
         DB::table('liveaccount')->insert([
             'email' => $user->email,
             'name' => $newUser->Name,
@@ -532,7 +643,7 @@ class ApiAjaxController extends Controller
             'ib14' => $user->ib14,
             'ib15' => $user->ib15
         ]);
-
+ addIpLog('liveaccountCreation', $datalogs);
         try {
             $this->sendMail($newUser, 'Live');
             return "true";
@@ -561,6 +672,14 @@ class ApiAjaxController extends Controller
             $password .= $allCharacters[rand(0, strlen($allCharacters) - 1)];
         }
         // Shuffle the password to avoid predictable patterns
+         $datalogs = [
+        'action' => 'password_generated',
+        'length' => $length,
+        'ip'     => request()->ip(),
+        'time'   => now()
+    ];
+
+    addIpLog('liveaccountCreation', $datalogs);
         $password = str_shuffle($password);
         return $password;
     }

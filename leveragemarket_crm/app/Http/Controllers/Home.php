@@ -85,7 +85,7 @@ class Home extends Controller
             'totalWalletDeposit' => $totalWalletDeposit,
             'totalWithdrawal' => $totalWithdrawal,
             'totalWalletWithdrawal' => $totalWalletWithdrawal,
-            'totalA2ATransfer' => $totalA2ATransfer,
+            'totalA2ATransfer' => $totalA2ATransfer+$totalWalletWithdrawal,
             'totalC2CTransfer' => $totalC2CTransfer,
             'liveAccounts' => $liveAccounts,
             'liveAccountDetails' => $liveAccountDetails,
@@ -104,7 +104,7 @@ class Home extends Controller
             'totalWalletDeposit' => $totalWalletDeposit,
             'totalWithdrawal' => $totalWithdrawal,
             'totalWalletWithdrawal' => $totalWalletWithdrawal,
-            'totalA2ATransfer' => $totalA2ATransfer,
+            'totalA2ATransfer' => $totalA2ATransfer+$totalWalletWithdrawal,
             'totalC2CTransfer' => $totalC2CTransfer,
             'liveAccounts' => $liveAccounts,
             'liveAccountDetails' => $liveAccountDetails,
@@ -174,7 +174,7 @@ class Home extends Controller
 		$wallet_withdrawal = DB::table('wallet_withdraw as trs')
 			->select(DB::raw('COALESCE(SUM(trs.withdraw_amount),0) as withdraw'))
 			->where('trs.email', $email)
-			->whereNotIn('trs.withdraw_type', ['W2A Deposit'])
+			->whereIn('trs.withdraw_type', ['W2A Deposit'])
 			->whereIn('trs.status', [1])
 			->get();
 		return $wallet_withdrawal[0]->withdraw;
@@ -183,7 +183,7 @@ class Home extends Controller
 	public function getA2ATransfer($email){
 		$a2a_transfer = DB::table('trade_withdrawal as trs')
 			->select(DB::raw('COALESCE(SUM(trs.withdrawal_amount),0) as a2awithdraw'))
-			->whereIn('trs.withdraw_type', ['A2A Transfer', 'W2A Deposit', 'A2W withdraw'])
+			->whereIn('trs.withdraw_type', ['A2A Transfer', 'A2W withdraw'])
 			->where('trs.email', $email)
 			->where('trs.status', 1)
 			->get();

@@ -92,7 +92,7 @@
 										<option value="">All Type</option>
 										<option value="Deposit" {{ request('filter_type') == 'Deposit' ? 'selected' : '' }}>Deposit</option>
 										<option value="Withdrawal" {{ request('filter_type') == 'Withdrawal' ? 'selected' : '' }}>Withdrawal</option>
-										<!--<option value="Transfer" {{ request('filter_type') == 'Transfer' ? 'selected' : '' }}>Transfer</option>-->
+										<option value="Transfer" {{ request('filter_type') == 'Transfer' ? 'selected' : '' }}>Transfer</option>
 									</select>
 									
 									<select name="filter_paymode" class="fxtran-input">

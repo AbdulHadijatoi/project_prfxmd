@@ -693,196 +693,200 @@ class Wallet extends Controller
 		]);
 	}
 	
-	public function wallettranscation(Request $request){
-        $user = auth()->user();
-		$email = auth()->user()->email;		
-		
+	public function wallettranscation(Request $request)
+	{
+		$user  = auth()->user();
+		$email = $user->email;
+
 		$from = $request->from;
 		$to   = $request->to;
-		$type      = $request->filter_type;
-		$paymode   = $request->filter_paymode;
+		$type = $request->filter_type;
+		$paymode = $request->filter_paymode;
 
+		/* ---------------- DATE FILTER ---------------- */
 		if ($request->filter_duration == 'today') {
-			$from = Carbon::today();
-			$to   = Carbon::today()->endOfDay();
+			$from = now()->startOfDay();
+			$to   = now()->endOfDay();
 		}
-		
+
 		if ($request->filter_duration == 'yesterday') {
-			$from = Carbon::yesterday()->startOfDay();
-			$to   = Carbon::yesterday()->endOfDay();
+			$from = now()->subDay()->startOfDay();
+			$to   = now()->subDay()->endOfDay();
 		}
 
 		if ($request->filter_duration == 'week') {
-			$from = now()->subDays(6)->startOfDay(); // last 7 days incl today
+			$from = now()->subDays(6)->startOfDay(); // last 7 days
 			$to   = now()->endOfDay();
 		}
 
 		if ($request->filter_duration == 'month') {
-			$from = now()->subDays(29)->startOfDay(); // last 30 days incl today
+			$from = now()->subDays(29)->startOfDay(); // last 30 days
 			$to   = now()->endOfDay();
 		}
 		
-		$deposit = WalletDeposit::select([
-			'id',
-			'Status',
-			DB::raw("'Deposit' as transtype"),
-			DB::raw('deposted_date as created_at'),
-			DB::raw("deposit_type as particulars"),
-			DB::raw("deposit_amount as valamount")
-		])
-		->where('email', $email);
-		
-		echo "<pre>";
-		print_r($deposit);
-		exit;
-		
-		$withdraw = WalletWithdraw::select([
-            'id',
-			'Status',    
-			DB::raw("'Withdraw' as transtype"),
-            DB::raw('withdraw_date as created_at'),
-			DB::raw("withdraw_type as particulars"),
-			DB::raw("withdraw_amount as valamount")
-        ])
-        ->where('email', $email);
-		
-		$transfer = WalletTransfer::select([
-            'id',
-			DB::raw("1 as Status"),
-			DB::raw("'Transfer' as transtype"),			
-			DB::raw('transfer_date as created_at'),
-            DB::raw("'C2C Transfer' as particulars"),			
-			DB::raw("
-				CASE 
-					WHEN wallet_to = '$email' THEN transfer_amount
-					WHEN wallet_from = '$email' THEN transfer_amount
-					ELSE 0
-				END as valamount
-			")
-        ])
-        ->where(function ($q) use ($email) {
-            $q->where('wallet_from', $email)
-              ->orWhere('wallet_to', $email);
-        });
-		
-		if ($type == 'Deposit') {
-			$union = $deposit;
+		if ($request->filter_duration == 'customrange') {
+			$from = $request->from;
+			$to   = $request->to;
 		}
-		elseif ($type == 'Withdrawal'){
+
+		/* =========================================================
+		   DEPOSIT (trade + wallet)
+		========================================================== */
+		$tradeDeposit = DB::table('trade_deposit')
+			->select([
+				'id',
+				'status as Status',
+				DB::raw("'Deposit' as transtype"),
+				DB::raw('deposted_date as created_at'),
+				DB::raw('deposit_type as particulars'),
+				DB::raw('deposit_amount as valamount')
+			])
+			->whereNotIn('deposit_type', ['Wallet Transfer', 'Wallet Payments', 'W2A Deposit', 'A2A Transfer'])
+			->where('email', $email);
+
+		$walletDeposit = DB::table('wallet_deposit')
+			->select([
+				'id',
+				'Status',
+				DB::raw("'Deposit' as transtype"),
+				DB::raw('deposted_date as created_at'),
+				DB::raw('deposit_type as particulars'),
+				DB::raw('deposit_amount as valamount')
+			])
+			->whereNotIn('deposit_type', ['Wallet Transfer','A2A Transfer','A2W withdraw','A2W Deposit'])
+			->where('email', $email);
+
+		/* =========================================================
+		   WITHDRAW
+		========================================================== */
+		$withdraw = DB::table('wallet_withdraw')
+			->select([
+				'id',
+				'Status',
+				DB::raw("'Withdrawal' as transtype"),
+				DB::raw('withdraw_date as created_at'),
+				DB::raw('withdraw_type as particulars'),
+				DB::raw('withdraw_amount as valamount')
+			])
+			->whereIn('withdraw_type', ['Wallet Withdrawal', 'External Withdrawal'])
+			->where('email', $email);
+
+		/* =========================================================
+		   TRANSFER
+		========================================================== */
+		$tradeDeposittrans = DB::table('trade_deposit')
+			->select([
+				'id',
+				'status as Status',
+				DB::raw("'Internal Transfer' as transtype"),
+				DB::raw('deposted_date as created_at'),
+				DB::raw('deposit_type as particulars'),
+				DB::raw('deposit_amount as valamount')
+			])
+			->whereIn('deposit_type', ['Wallet Transfer', 'Wallet Payments', 'W2A Deposit', 'A2A Transfer'])
+			->where('email', $email);
+
+		$walletDeposittrans = DB::table('wallet_deposit')
+			->select([
+				'id',
+				'Status',
+				DB::raw("'Internal Transfer' as transtype"),
+				DB::raw('deposted_date as created_at'),
+				DB::raw('deposit_type as particulars'),
+				DB::raw('deposit_amount as valamount')
+			])
+			->whereIn('deposit_type', ['Wallet Transfer','A2A Transfer','A2W withdraw','A2W Deposit'])
+			->where('email', $email);
+		
+
+		/* =========================================================
+		   APPLY DATE FILTER BEFORE UNION (FAST)
+		========================================================== */
+		if ($from && $to) {
+			$tradeDeposit->whereBetween('deposted_date', [$from, $to]);
+			$walletDeposit->whereBetween('deposted_date', [$from, $to]);
+			$withdraw->whereBetween('withdraw_date', [$from, $to]);
+			$tradeDeposittrans->whereBetween('deposted_date', [$from, $to]);
+			$walletDeposittrans->whereBetween('deposted_date', [$from, $to]);
+		}
+
+		/* =========================================================
+		   UNION BUILD
+		========================================================== */
+		if ($type == 'Deposit') {
+			$union = $tradeDeposit->unionAll($walletDeposit);
+		}
+		elseif ($type == 'Withdrawal') {
 			$union = $withdraw;
 		}
-		elseif ($type == 'Transfer'){
-			$union = $transfer;
+		elseif ($type == 'Transfer') {
+			$union = $walletDeposittrans->unionAll($tradeDeposittrans);
 		}
 		else {
-			$union = $deposit->unionAll($withdraw);
+			$union = $tradeDeposit
+				->unionAll($walletDeposit)
+				->unionAll($withdraw)
+				//->unionAll($transfer)
+				->unionAll($walletDeposittrans)
+				->unionAll($tradeDeposittrans);
 		}
-		$baseLedger = DB::query()->fromSub($union, 'ledger');
 		
-		// APPLY DATE FILTER
-		if ($from && $to) {
-			$baseLedger->whereBetween('created_at', [$from, $to]);
-		}
+		/* PAYMODE FILTER */		
+		if ($paymode == 'Wallet Deposit') {
+			$union = $walletDeposit;
+		} else 
 		
-		// ---------------------------
-		// SUMMARY TOTALS
-		// ---------------------------
-				
-		/*Deposit Total*/
-		$tradeDepositQuery = DB::table('trade_deposit as trs')
-			->where('trs.status', 1)
-			->where('trs.email', $email)
-			->whereNotIn('trs.deposit_type', ['Wallet Transfer', 'Wallet Payments', 'W2A Deposit', 'A2A Transfer']);
 
-		/*if ($from && $to) {
-			$tradeDepositQuery->whereBetween('trs.deposted_date', [$from, $to]);
-		}
-		if ($type == 'Deposit') {
-			$tradeDepositQuery->whereRaw('1=0'); // deposit is credit only
-		}
-		if ($paymode) {
-			$tradeDepositQuery->where('trs.deposit_type', $paymode);
-		}*/
-		$trade_deposit = $tradeDepositQuery->sum('trs.deposit_amount');
-		
-		$walletDepositQuery = DB::table('wallet_deposit as trs')
-			->where('trs.status', 1)
-			->where('trs.email', $email)
-			->whereNotIn('trs.deposit_type', ['Wallet Transfer','A2A Transfer','A2W withdraw','A2W Deposit']);
-		/*if ($from && $to) {
-			$walletDepositQuery->whereBetween('trs.deposted_date', [$from, $to]);
-		}
-		if ($type == 'Withdrawal') {
-			$walletDepositQuery->whereRaw('1=0');
-		}
-		if ($paymode) {
-			$walletDepositQuery->where('trs.deposit_type', $paymode);
-		}*/
-		$wallet_deposit = $walletDepositQuery->sum('trs.deposit_amount');
-		
-        $totalCredit = $trade_deposit + $wallet_deposit;
-		
-		/*Withdraw*/
-		$withdrawQuery = DB::table('wallet_withdraw as trs')
-			->where('trs.email', $email)
-			->where('trs.status', 1)
-			->whereIn('trs.withdraw_type', ['Wallet Withdrawal', 'External Withdrawal']);
-
-		/*if ($from && $to) {
-			$withdrawQuery->whereBetween('trs.withdraw_date', [$from, $to]);
-		}
-		if ($type == 'Withdrawal') {
-			$withdrawQuery->whereRaw('1=0');
-		}
-		if ($paymode) {
-			$withdrawQuery->where('trs.withdraw_type', $paymode);
-		}*/
-		$totalDebit = $withdrawQuery->sum('trs.withdraw_amount');
+		$ledgerQuery = DB::query()->fromSub($union, 'ledger');
 
 		
-		/*Transfer*/
-		$transferQuery = DB::table('trade_withdrawal as trs')
-			->where('trs.email', $email)
-			->where('trs.status', 1)
-			->whereIn('trs.withdraw_type', ['A2A Transfer', 'W2A Deposit', 'A2W withdraw']);
-
-		/*if ($from && $to) {
-			$transferQuery->whereBetween('trs.withdraw_date', [$from, $to]);
-		}
-		if ($type == 'Deposit') {
-			$transferQuery->whereRaw('1=0');
-		}
-		if ($paymode) {
-			$transferQuery->where('trs.withdraw_type', $paymode);
-		}*/
-		$totalTransferCredit = $transferQuery->sum('trs.withdrawal_amount');
 		
-		// ---------------------------
-		// PAGINATION
-		// ---------------------------
-		$ledger = $baseLedger
+
+		/* =========================================================
+		   PAGINATION
+		========================================================== */
+		$ledger = $ledgerQuery
 			->orderByDesc('created_at')
 			->paginate(20)
 			->withQueryString();
+
+		/* =========================================================
+		   TOTALS
+		========================================================== */
+		$totalCredit = DB::table('trade_deposit')
+			->where('email', $email)
+			->whereNotIn('deposit_type', ['Wallet Transfer', 'Wallet Payments', 'W2A Deposit', 'A2A Transfer'])
+			->sum('deposit_amount')
+			+ DB::table('wallet_deposit')
+			->where('email', $email)
+			->whereNotIn('deposit_type', ['Wallet Transfer','A2A Transfer','A2W withdraw','A2W Deposit'])
+			->sum('deposit_amount');
+
+		$totalDebit = DB::table('wallet_withdraw')
+			->where('email', $email)
+			->whereIn('withdraw_type', ['Wallet Withdrawal', 'External Withdrawal'])
+			->sum('withdraw_amount');
+
+		$totalTransferCredit = DB::table('trade_withdrawal')
+			->where('email', $email)
+			->whereIn('withdraw_type', ['A2A Transfer', 'A2W withdraw'])
+			->sum('withdrawal_amount')
+			+ DB::table('wallet_withdraw')
+			->where('email', $email)
+			->whereIn('withdraw_type', ['W2A Deposit'])
+			->sum('withdraw_amount');
+			
 		
-		$datalogs =[
-            'user' => $user,
-			'ledger' => $ledger,
-			'totalCredit' => $totalCredit ?? 0,
-			'totalDebit'  => $totalDebit ?? 0,
-			'totalTransferCredit' => $totalTransferCredit ?? 0
-        ];
-        addIpLog('Wallet Transcation View', $datalogs);
-		return view('wallet_transactions', [
-			'user' => $user,
-			'ledger' => $ledger,
-			'totalCredit' => $totalCredit ?? 0,
-			'totalDebit'  => $totalDebit ?? 0,
-			'totalTransferCredit' => $totalTransferCredit ?? 0
-		]);
-		
-		//return view('wallet_transactions', compact('user','deposit_history','withdrawal_history', 'transfer_history'));
+
+		return view('wallet_transactions', compact(
+			'user',
+			'ledger',
+			'totalCredit',
+			'totalDebit',
+			'totalTransferCredit'
+		));
 	}
+
 	
 	private function createPaytikoPayment($amount, $currency, $orderId, $paymentId)
 	{

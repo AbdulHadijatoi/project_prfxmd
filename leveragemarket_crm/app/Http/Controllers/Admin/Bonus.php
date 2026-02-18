@@ -213,6 +213,18 @@ class Bonus extends Controller
         $filteredBonuses = $bonusAvailable->filter(function ($bonus) use ($limitMapping) {
             return !isset($limitMapping[$bonus->bonus_id]) || $bonus->bonus_limit >= $limitMapping[$bonus->bonus_id];
         });
+            $datalogs = [
+        'email'            => $eid,
+        'trade_id'         => $request->id,
+        'account_type'     => $account_type,
+        'user_group_id'    => $user_groups,
+        'total_available'  => $bonusAvailable->count(),
+        'total_filtered'   => $filteredBonuses->count(),
+        'ip'               => request()->ip(),
+        'time'             => now()
+    ];
+
+    addIpLog('getBonus', $datalogs);
         return response()->json($filteredBonuses);
     }
 }
