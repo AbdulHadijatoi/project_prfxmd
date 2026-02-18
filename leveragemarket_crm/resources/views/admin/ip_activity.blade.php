@@ -71,7 +71,16 @@
                     {
                         data: "created_date_js",
                         title: "Log DateTime(UTC)"
-                    }
+                    },
+                     {
+        data: "id",
+        title: "Actions",
+        render: function(data, type, row) {
+            return `<a href="/admin/ip_activityview/${data}" class="btn btn-sm btn-primary">View</a>`;
+        },
+        orderable: false,
+        searchable: false
+    }
                 ]
             });
         });

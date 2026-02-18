@@ -757,7 +757,7 @@ class Wallet extends Controller
 			->where('email', $email);
 
 		/* =========================================================
-		   WITHDRAW
+		   WITHDRAW (trade + wallet)
 		========================================================== */
 		$withdraw = DB::table('wallet_withdraw')
 			->select([
@@ -768,7 +768,19 @@ class Wallet extends Controller
 				DB::raw('withdraw_type as particulars'),
 				DB::raw('withdraw_amount as valamount')
 			])
-			->whereIn('withdraw_type', ['Wallet Withdrawal', 'External Withdrawal'])
+			->whereIn('withdraw_type', ['Wallet Withdrawal', 'External Withdrawal', 'Wallet Withdrawal (Admin)'])
+			->where('email', $email);
+			
+		$tradewithdraw = DB::table('trade_withdrawal')
+			->select([
+				'id',
+				'Status',
+				DB::raw("'Withdrawal' as transtype"),
+				DB::raw('withdraw_date as created_at'),
+				DB::raw('withdraw_type as particulars'),
+				DB::raw('withdrawal_amount as valamount')
+			])
+			->whereIn('withdraw_type', ['Trade Withdrawal (Admin)'])
 			->where('email', $email);
 
 		/* =========================================================
@@ -806,6 +818,7 @@ class Wallet extends Controller
 			$tradeDeposit->whereBetween('deposted_date', [$from, $to]);
 			$walletDeposit->whereBetween('deposted_date', [$from, $to]);
 			$withdraw->whereBetween('withdraw_date', [$from, $to]);
+			$tradewithdraw->whereBetween('withdraw_date', [$from, $to]);
 			$tradeDeposittrans->whereBetween('deposted_date', [$from, $to]);
 			$walletDeposittrans->whereBetween('deposted_date', [$from, $to]);
 		}
@@ -822,6 +835,7 @@ class Wallet extends Controller
 			$union = $tradeDeposit
 				->unionAll($walletDeposit)
 				->unionAll($withdraw)
+				->unionAll($tradewithdraw)
 				//->unionAll($transfer)
 				->unionAll($walletDeposittrans)
 				->unionAll($tradeDeposittrans);
@@ -842,7 +856,7 @@ class Wallet extends Controller
 		========================================================== */
 		$ledger = $ledgerQuery
 			->orderByDesc('created_at')
-			->paginate(20)
+			->paginate(10)
 			->withQueryString();
 
 		/* =========================================================
@@ -859,12 +873,13 @@ class Wallet extends Controller
 
 		$totalDebit = DB::table('wallet_withdraw')
 			->where('email', $email)
-			->whereIn('withdraw_type', ['Wallet Withdrawal', 'External Withdrawal'])
+			->whereIn('status', [1])
+			->whereIn('withdraw_type', ['Wallet Withdrawal', 'External Withdrawal', 'Wallet Withdrawal (Admin)'])
 			->sum('withdraw_amount');
 
 		$totalTransferCredit = DB::table('trade_withdrawal')
 			->where('email', $email)
-			->whereIn('withdraw_type', ['A2A Transfer', 'A2W withdraw'])
+			->whereIn('withdraw_type', ['A2A Transfer', 'A2W withdraw', 'Trade Withdrawal (Admin)'])
 			->sum('withdrawal_amount')
 			+ DB::table('wallet_withdraw')
 			->where('email', $email)

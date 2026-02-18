@@ -162,7 +162,7 @@ class Home extends Controller
 			->select(DB::raw('COALESCE(SUM(trs.withdraw_amount),0) as withdraw'))
 			->where('trs.email', $email)
 			->whereIn('trs.status', [1])
-			->whereIn('trs.withdraw_type', ['Wallet Withdrawal', 'External Withdrawal'])
+			->whereIn('trs.withdraw_type', ['Wallet Withdrawal', 'External Withdrawal', 'Wallet Withdrawal (Admin)'])
 			->get();
 
         $totalWithdrawal = 0 + $wallet_withdrawal[0]->withdraw;

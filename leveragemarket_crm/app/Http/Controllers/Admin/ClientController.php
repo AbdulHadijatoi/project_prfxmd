@@ -483,6 +483,7 @@ $datalogs = ['name' => Str::before($request->email, '@'),
 
         if (!empty($user)) {
             $eid = $user->email;
+			$email = $user->email;
             $clients = [];
             // for ($i = 1; $i <= 15; $i++) {
             //     $foundClients = IbClientList::where("ib$i", $user->email)->get();
@@ -517,7 +518,7 @@ $datalogs = ['name' => Str::before($request->email, '@'),
 				->select(DB::raw('COALESCE(SUM(trs.withdraw_amount),0) as withdraw'))
 				->where('trs.email', $eid)
 				->whereIn('trs.status', [1])
-				->whereIn('trs.withdraw_type', ['Wallet Withdrawal', 'C2C Transfer'])
+				->whereIn('trs.withdraw_type', ['Wallet Withdrawal', 'External Withdrawal', 'Wallet Withdrawal (Admin)'])
 				->get();
 			$total_ww = $total_witdraw[0]->withdraw;				
             
@@ -664,45 +665,138 @@ $datalogs = ['name' => Str::before($request->email, '@'),
         // echo'<pre>';print_r($walletBalance);exit;
 		
 		/*Wallet transcation summary*/
-		$deposit = WalletDeposit::select([
-			'id',
-			'Status',
-			DB::raw('deposted_date as created_at'),
-			DB::raw("deposit_type as particulars"),
-			DB::raw("deposit_amount as credit"),
-			DB::raw("0 as debit")				
-		])
-		->where('email', $eid);
+		$from = $request->from;
+		$to   = $request->to;
+		$type = $request->filter_type;
+		$paymode = $request->filter_paymode; 
+		/* =========================================================
+		   DEPOSIT (trade + wallet)
+		========================================================== */
+		$tradeDeposit = DB::table('trade_deposit')
+			->select([
+				'id',
+				'status as Status',
+				DB::raw("'Deposit' as transtype"),
+				DB::raw('deposted_date as created_at'),
+				DB::raw('deposit_type as particulars'),
+				DB::raw('deposit_amount as valamount')
+			])
+			->whereNotIn('deposit_type', ['Wallet Transfer', 'Wallet Payments', 'W2A Deposit', 'A2A Transfer', 'Bonus Deposit'])
+			->where('email', $email);
+
+		$walletDeposit = DB::table('wallet_deposit')
+			->select([
+				'id',
+				'Status',
+				DB::raw("'Deposit' as transtype"),
+				DB::raw('deposted_date as created_at'),
+				DB::raw('deposit_type as particulars'),
+				DB::raw('deposit_amount as valamount')
+			])
+			->whereNotIn('deposit_type', ['Wallet Transfer','A2A Transfer','A2W withdraw','A2W Deposit'])
+			->where('email', $email);
+
+		/* =========================================================
+		   WITHDRAW (trade + wallet)
+		========================================================== */
+		$withdraw = DB::table('wallet_withdraw')
+			->select([
+				'id',
+				'Status',
+				DB::raw("'Withdrawal' as transtype"),
+				DB::raw('withdraw_date as created_at'),
+				DB::raw('withdraw_type as particulars'),
+				DB::raw('withdraw_amount as valamount')
+			])
+			->whereIn('withdraw_type', ['Wallet Withdrawal', 'External Withdrawal', 'Wallet Withdrawal (Admin)'])
+			->where('email', $email);
+			
+		$tradewithdraw = DB::table('trade_withdrawal')
+			->select([
+				'id',
+				'Status',
+				DB::raw("'Withdrawal' as transtype"),
+				DB::raw('withdraw_date as created_at'),
+				DB::raw('withdraw_type as particulars'),
+				DB::raw('withdrawal_amount as valamount')
+			])
+			->whereIn('withdraw_type', ['Trade Withdrawal (Admin)'])
+			->where('email', $email);
+
+		/* =========================================================
+		   TRANSFER
+		========================================================== */
+		$tradeDeposittrans = DB::table('trade_deposit')
+			->select([
+				'id',
+				'status as Status',
+				DB::raw("'Internal Transfer' as transtype"),
+				DB::raw('deposted_date as created_at'),
+				DB::raw('deposit_type as particulars'),
+				DB::raw('deposit_amount as valamount')
+			])
+			->whereIn('deposit_type', ['Wallet Transfer', 'Wallet Payments', 'W2A Deposit', 'A2A Transfer'])
+			->where('email', $email);
+
+		$walletDeposittrans = DB::table('wallet_deposit')
+			->select([
+				'id',
+				'Status',
+				DB::raw("'Internal Transfer' as transtype"),
+				DB::raw('deposted_date as created_at'),
+				DB::raw('deposit_type as particulars'),
+				DB::raw('deposit_amount as valamount')
+			])
+			->whereIn('deposit_type', ['Wallet Transfer','A2A Transfer','A2W withdraw','A2W Deposit'])
+			->where('email', $email);
 		
-		$withdraw = WalletWithdraw::select([
-            'id',
-			'Status',            
-            DB::raw('withdraw_date as created_at'),
-			DB::raw("withdraw_type as particulars"),
-			DB::raw("0 as credit"),
-			DB::raw("withdraw_amount as debit")
-        ])
-        ->where('email', $eid);
+
+		/* =========================================================
+		   APPLY DATE FILTER BEFORE UNION (FAST)
+		========================================================== */
+		if ($from && $to) {
+			$tradeDeposit->whereBetween('deposted_date', [$from, $to]);
+			$walletDeposit->whereBetween('deposted_date', [$from, $to]);
+			$withdraw->whereBetween('withdraw_date', [$from, $to]);
+			$tradewithdraw->whereBetween('withdraw_date', [$from, $to]);
+			$tradeDeposittrans->whereBetween('deposted_date', [$from, $to]);
+			$walletDeposittrans->whereBetween('deposted_date', [$from, $to]);
+		}
 		
-		$transfer = WalletTransfer::select([
-            'id',
-			DB::raw("1 as Status"),
-			DB::raw('transfer_date as created_at'),
-            DB::raw("'C2C Transfer' as particulars"),
-            DB::raw("CASE WHEN wallet_to = '$eid' THEN transfer_amount ELSE 0 END as credit"),
-            DB::raw("CASE WHEN wallet_from = '$eid' THEN transfer_amount ELSE 0 END as debit")
-        ])
-        ->where(function ($q) use ($eid) {
-            $q->where('wallet_from', $eid)
-              ->orWhere('wallet_to', $eid);
-        });
+		/* =========================================================
+		   UNION BUILD
+		========================================================== */
 		
-		$union = $deposit->unionAll($withdraw);
-		$baseLedger = DB::query()->fromSub($union, 'ledger');
-		
-		$ledger = $baseLedger
+		if ($paymode == 'Wallet Deposit') {
+			$union = $walletDeposit;
+		} elseif ($paymode == 'Trade Deposit'){
+			$union = $tradeDeposit;
+		} else {
+			$union = $tradeDeposit
+				->unionAll($walletDeposit)
+				->unionAll($withdraw)
+				->unionAll($tradewithdraw)
+				//->unionAll($transfer)
+				->unionAll($walletDeposittrans)
+				->unionAll($tradeDeposittrans);
+		}	
+
+		$ledgerQuery = DB::query()->fromSub($union, 'ledger');		
+		if ($type) {
+			$ledgerQuery->where('transtype', $type);
+		}
+
+		/* PAYMODE FILTER */
+		if ($paymode && !in_array($paymode, ['Wallet Deposit','Trade Deposit'])) {
+			$ledgerQuery->where('particulars', $paymode);
+		}		
+
+		/* =========================================================
+		   PAGINATION
+		========================================================== */
+		$ledger = $ledgerQuery
 			->orderByDesc('created_at')
-			->paginate(20)
+			->paginate(10)
 			->withQueryString();
 		
 		
@@ -818,8 +912,26 @@ public function updateAccLimit(Request $request)
     {
         return view("admin.ip_activity");
     }
-     public function activityLogview()
-    {
-        return view("admin.ip_activityview");
+public function activityLogview($id)
+{
+    $log = DB::table('login_history')
+        ->leftJoin('aspnetusers as user', 'login_history.email', '=', 'user.email')
+        ->leftJoin('emplist as emp', 'login_history.email', '=', 'emp.email')
+        ->select(
+            DB::raw('COALESCE(user.fullname, emp.username) as display_name'),
+            'login_history.*'
+        )
+        ->where('login_history.id', $id)   // make sure 'id' exists in login_history
+        ->first();
+
+    if (!$log) {
+        abort(404, 'Activity log not found.');
     }
+
+    $log->datalog = json_decode($log->datalog, true) ?? [];
+
+    return view('admin.ip_activityview', ['log' => $log]);
+}
+
+
 }

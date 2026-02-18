@@ -92,11 +92,11 @@
 										<option value="">All Type</option>
 										<option value="Deposit" {{ request('filter_type') == 'Deposit' ? 'selected' : '' }}>Deposit</option>
 										<option value="Withdrawal" {{ request('filter_type') == 'Withdrawal' ? 'selected' : '' }}>Withdrawal</option>
-										<option value="Internal Transfer" {{ request('filter_type') == 'Transfer' ? 'selected' : '' }}>Transfer</option>
+										<option value="Internal Transfer" {{ request('filter_type') == 'Internal Transfer' ? 'selected' : '' }}>Transfer</option>
 									</select>
 									
 									<select name="filter_paymode" class="fxtran-input">
-										<option value="">Payment Method</option>
+										<option value="">All Payment Method</option>
 										<p>Deposit</p>
 										<option value="Wallet Deposit" {{ request('filter_paymode') == 'Wallet Deposit' ? 'selected' : '' }}>Wallet Deposit</option>
 										<option value="Trade Deposit" {{ request('filter_paymode') == 'Trade Deposit' ? 'selected' : '' }}>Trade Deposit</option>										

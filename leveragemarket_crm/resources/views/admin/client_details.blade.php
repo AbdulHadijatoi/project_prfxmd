@@ -851,11 +851,7 @@
 											<div class="card custom-card">
 											<div class="card-header justify-content-between">
 												<div class="card-title">ALL TRANSACTIONS</div>
-												<div class="d-flex">
-													<a href="/admin/transactions/all_transactions"
-														class="btn btn-sm btn-primary-light">View
-														All</a>
-												</div>													
+																								
 											</div>
 											<div class="card-body">
 												
@@ -878,45 +874,46 @@
 															${{ htmlentities(number_format($a2a_transfer, 2)) }}
 														</h4>
 													</div>
-												</div>
-							
+												</div>							
 										
 												<div class="d-flex align-items-center justify-content-between mt-3">
-												<table class="table table-responsive">
+												<table class="table table-responsive ledgerTable" id="ledgerTable">
 													<thead>
 														<tr>
-															<th>Sno</th>
+															<th>#ID</th>
 															<th>Date</th>
-															<th>Particulars</th>
-															<th>Debit</th>
-															<th>Credit</th>
+															<th>Type</th>
+															<th>Amount</th>
+															<th>Currency</th>
+															<th>Method</th>
 															<th>Status</th>
+															<th>Action</th>
 														</tr>
 													</thead>
 													<tbody>
 														@foreach($ledger as $row)
 														<tr>
-															<td>{{ $loop->iteration }}</td>
-															
+															<td>TXN0{{ $loop->iteration }}</td>									
 															<td>
 																<h6 class="f-w-500">{{Carbon::parse($row->created_at)->format('Y-m-d') }}</h6>
 																<p class="text-muted mb-0">
 																  <small>{{ Carbon::parse($row->created_at)->format('H:i A') }}</small>
 																</p>
 															</td>
-															<td>{{ $row->particulars }}</td>
-															<td><h6 class="f-w-500 f-16">{{ $row->debit }}</h6></td>
-															<td><h6 class="f-w-500 f-16">{{ $row->credit }}</h6></td>
+															<td>{{ $row->transtype }}</td>
+															<td><h6 class="f-w-500 f-16">{{ $row->valamount }}</h6></td>
+															<td><h6 class="f-w-500 f-16">USD</h6></td>
+															<td><h6 class="f-w-500 f-16">{{ $row->particulars }}</h6></td>
 															<td class="{{ $row->Status == 0 ? 'text-warning' : ($row->Status == 1 ? 'text-success' : 'text-danger') }}">
 																<p>{{ $row->Status == 0 ? 'Pending' : ($row->Status == 1 ? 'Success' : 'Rejected') }}</p>
 															</td>
+															<td></td>
 														</tr>
 														@endforeach
 													</tbody>
 												</table>
 												</div>
-												
-												<div class="d-flex justify-content-between align-items-center mt-3">
+												<?PHP /*<div class="d-flex justify-content-between align-items-center mt-3">
 													<div>
 														Showing {{ $ledger->firstItem() }} to {{ $ledger->lastItem() }}
 														of {{ $ledger->total() }} entries
@@ -924,7 +921,7 @@
 													<div>
 														{{ $ledger->links() }}
 													</div>
-												</div>
+												</div> */ ?>
 												
 												<div class="d-flex justify-content-between align-items-center mt-3">
 													<div>
@@ -1821,6 +1818,31 @@
             </div>
         </div>
     </div> --}}
+	<script>
+$(document).ready(function () {
+
+    $('#ledgerTable').DataTable({
+        paging: true,        // Laravel pagination already
+        info: true,
+        ordering: true,
+        searching: true,
+        responsive: true,
+        pageLength: 25,
+
+        columnDefs: [
+            { orderable: false, targets: [7] } // action column
+        ],
+
+        language: {
+            search: "Search:",
+            zeroRecords: "No transactions found",
+            emptyTable: "No data available"
+        }
+    });
+
+});
+</script>
+
     <script>
       $('#otpModal2').on('hidden.bs.modal', function () {
     location.reload();
