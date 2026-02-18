@@ -537,7 +537,7 @@ class Wallet extends Controller
                 'withdraw_amount' => $withdrawAmount,
                 'payment_id' => $paymentLog->payment_id,
             ]);
-            if ($withdrawAmount <= 5) {
+            if ($withdrawAmount <= 200) {
                 $this->payoutService->approveWithdrawal($paymentLog->payment_id, false);
                 return redirect()->back()->with('success', 'Withdrawal approved. You will receive a confirmation email shortly.');
             }
