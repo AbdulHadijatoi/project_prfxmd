@@ -1,0 +1,22 @@
+# IDE Files
+#-------------------------
+/nbproject/
+.idea/*
+
+## Sublime Text cache files
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
+
+node_modules/
+storage/
+.env
+vendor/
+config/livewire.php
+storage/
+public/
+
+app/Services/MailService.php
+
