@@ -1090,19 +1090,28 @@
             </div>
         `;
                         }
-                    },{
+                    },
+                    {
+                        title: 'Name',
+                        data: "user_name",
+                    },
+                    {
                         title: 'TYPE',
                         data: "ib_wallet",
                         render: function(data, type, row) {
                             return row.ib_wallet?(row.order_type==0?"Buy":(row.order_type==1?"Sell":"")):"Transfer";
                         }
-                    },  {
+                    },
+                      
+                      {
                         title: 'COMMISSION PER LOT',
                         data: "comission_per_lot",
                         render: function(data, type, row) {
                             return data ? data : '0.00';
                         }
-                    }, {
+                    },
+
+                     {
                         data: 'ib_level',
                         title: 'LEVEL',
                         render: function(data, type, row) {

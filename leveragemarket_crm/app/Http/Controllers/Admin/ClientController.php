@@ -794,10 +794,7 @@ $datalogs = ['name' => Str::before($request->email, '@'),
 		/* =========================================================
 		   PAGINATION
 		========================================================== */
-		$ledger = $ledgerQuery
-			->orderByDesc('created_at')
-			->paginate(10)
-			->withQueryString();
+		$ledger = $ledgerQuery->orderByDesc('created_at')->get();
 		
 		
         if ($request->get('partial') == '1') {
@@ -912,26 +909,10 @@ public function updateAccLimit(Request $request)
     {
         return view("admin.ip_activity");
     }
-public function activityLogview($id)
-{
-    $log = DB::table('login_history')
-        ->leftJoin('aspnetusers as user', 'login_history.email', '=', 'user.email')
-        ->leftJoin('emplist as emp', 'login_history.email', '=', 'emp.email')
-        ->select(
-            DB::raw('COALESCE(user.fullname, emp.username) as display_name'),
-            'login_history.*'
-        )
-        ->where('login_history.id', $id)   // make sure 'id' exists in login_history
-        ->first();
-
-    if (!$log) {
-        abort(404, 'Activity log not found.');
+public function activityLogs()
+    {
+        return view("admin.ip_activityview");
     }
-
-    $log->datalog = json_decode($log->datalog, true) ?? [];
-
-    return view('admin.ip_activityview', ['log' => $log]);
-}
 
 
 }

@@ -80,9 +80,9 @@
 							</div>
 						</div>
 						<div class="card-footer">
-							<!--<button class="btn btn-success btn-sm light text-uppercase btn-block me-3 w-100 text-black claimbouns" data-url="{{ route('bouns.enroll', ['bonusid' => md5($bonus->bonus_id)]) }}" >Claim Now</button>-->
+							<button class="btn btn-success btn-sm light text-uppercase btn-block me-3 w-100 text-black claimbouns" data-url="{{ route('bouns.enroll', ['bonusid' => md5($bonus->bonus_id)]) }}" >Claim Now</button>
 							
-							<button class="btn btn-success btn-sm light text-uppercase btn-block me-3 w-100 text-black claimbouns" data-url="{{ route('trade-deposit', ['bonusid' => md5($bonus->bonus_id)]) }}" >Claim Now</button>
+							<!--<button class="btn btn-success btn-sm light text-uppercase btn-block me-3 w-100 text-black claimbouns" data-url="{{ route('trade-deposit', ['bonusid' => md5($bonus->bonus_id)]) }}" >Claim Now</button>-->
 						</div>
 					</div>
 				</div>

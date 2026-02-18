@@ -230,7 +230,25 @@
 									<td class="{{ $row->Status == 0 ? 'text-warning' : ($row->Status == 1 ? 'text-success' : 'text-danger') }}">
 										<p>{{ $row->Status == 0 ? 'Pending' : ($row->Status == 1 ? 'Success' : 'Rejected') }}</p>
 									</td>
-									<td></td>
+									@if($row->Status == 0)
+											<td>
+												<span class="cancelPayment"
+														data-id="{{ $row->id }}" data-particulars="{{ $row->particulars }}">
+													<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+												viewBox="0 0 32 32" enable-background="new 0 0 32 32" xml:space="preserve" width="20" height="20">
+											<path fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10" d="M23,27H11c-1.1,0-2-0.9-2-2V8h16v17
+												C25,26.1,24.1,27,23,27z"/>
+											<line fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10" x1="27" y1="8" x2="7" y2="8"/>
+											<path fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10" d="M14,8V6c0-0.6,0.4-1,1-1h4c0.6,0,1,0.4,1,1v2"/>
+											<line fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10" x1="17" y1="23" x2="17" y2="12"/>
+											<line fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10" x1="21" y1="23" x2="21" y2="12"/>
+											<line fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10" x1="13" y1="23" x2="13" y2="12"/>
+											</svg>
+											</span>
+											</td>
+											@else
+											<td>-</td>
+											@endif
 								</tr>
 								@endforeach
 							</tbody>
@@ -266,6 +284,70 @@
   </div>
 </div>
 <script>
+
+	$(document).on('click', '.cancelPayment', function () {
+
+    let id = $(this).data('id');
+	 let particulars = $(this).data('particulars');
+    let row = $(this).closest('tr');
+	alert(id);
+alert(particulars);
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "You want to cancel this payment!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, Cancel it!',
+        cancelButtonText: 'No'
+    }).then((result) => {
+
+        if (result.isConfirmed) {
+
+            $.ajax({
+                url: "#",
+                type: "POST",
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    id: id
+                },
+                success: function (response) {
+
+                    if (response.status === 'success') {
+
+                        Swal.fire(
+                            'Cancelled!',
+                            response.message,
+                            'success'
+                        );
+
+                        // Remove row without reload
+                        row.remove();
+
+                    } else {
+                        Swal.fire(
+                            'Error!',
+                            response.message,
+                            'error'
+                        );
+                    }
+
+                },
+                error: function () {
+                    Swal.fire(
+                        'Error!',
+                        'Something went wrong.',
+                        'error'
+                    );
+                }
+            });
+
+        }
+
+    });
+
+});
 	$(document).ready(function () {
 		let today = new Date().toISOString().split('T')[0];
 		$('input[name="from"]').attr('max', today);

@@ -922,14 +922,14 @@ class Ib extends Controller
         $email = session('clogin');
         $histories = IbWallet::where('ib_wallet.email', $email)
             ->leftjoin('ib1_commission', 'ib_wallet.order_id', '=', 'ib1_commission.order_id')
-			// ->leftjoin('aspnetusers', 'aspnetusers.email', '=', 'ib_wallet.remark')
-            ->select('ib_wallet.*', 'ib1_commission.volume','ib1_commission.order_type')
+			 ->leftjoin('aspnetusers', 'aspnetusers.email', '=', 'ib_wallet.remark')
+            ->select('ib_wallet.*', 'ib1_commission.volume','ib1_commission.order_type','aspnetusers.fullname as user_name')
 			//->where('ib1_commission.order_type', 1)
 			->whereIn('ib1_commission.order_type', [0, 1])
             ->groupBy('ib_wallet.order_id')
 			->orderBy('ib1_commission.time_closed', 'desc')
             ->get();
-			// echo'<pre>';print_r($histories);exit;
+			//  echo'<pre>';print_r($histories);exit;
         echo json_encode(value: ['data' => $histories]);
     }
 }

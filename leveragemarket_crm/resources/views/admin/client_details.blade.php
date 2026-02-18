@@ -877,7 +877,8 @@
 												</div>							
 										
 												<div class="d-flex align-items-center justify-content-between mt-3">
-												<table class="table table-responsive ledgerTable" id="ledgerTable">
+												<div class="table-responsive" style="width: 100%; overflow-x: auto;">
+												<table id="ledgerTable" class="ledgerTable table table-bordered text-nowrap w-100">
 													<thead>
 														<tr>
 															<th>#ID</th>
@@ -912,6 +913,7 @@
 														@endforeach
 													</tbody>
 												</table>
+												</div>
 												</div>
 												<?PHP /*<div class="d-flex justify-content-between align-items-center mt-3">
 													<div>
@@ -1827,7 +1829,7 @@ $(document).ready(function () {
         ordering: true,
         searching: true,
         responsive: true,
-        pageLength: 25,
+        pageLength: 10,
 
         columnDefs: [
             { orderable: false, targets: [7] } // action column

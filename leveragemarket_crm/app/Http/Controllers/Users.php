@@ -668,7 +668,7 @@ $datalog = [
 		try {
 			$bonusDetails = BonusModel::whereRaw("MD5(bonus_id) = ?", [$request->bonus_id])->first();
 			//Check the logic based on bonus terms*/
-			/*if ($bonusDetails->bonus_accessable == "first_deposit") {
+			if ($bonusDetails->bonus_accessable == "first_deposit" || $bonusDetails->bonus_accessable == "welcome_bouns") {
 				$checkexistdep = TradeDeposits::where('email', $email)
 					->where('trade_id', $request->trade_id)
 					->count();
@@ -678,14 +678,14 @@ $datalog = [
 						'message' => 'This Bouns code Not applicable first Deposit. Already you are did deposited.'
 					]);
 				}
-			} else if ($bonusDetails->bonus_accessable == "welcome_bouns") {
-				$checkexistdep = BonusTransaction::where('email', $email)
-					->where('bonus_id', $bonus_id)
+			} else if ($bonusDetails->bonus_accessable == "regular_bouns") {
+				$checkexistdep = TradeDeposits::where('email', $email)
+					->where('trade_id', $request->trade_id)
 					->count();
-				if ($checkexistdep == 0) {
+				if ($checkexistdep > 0) {
 					echo "ok";
 				} else {
-					return redirect()->back()->with('error', 'Welcome Bonus Already you have used. Check any other bonus.');
+					return redirect()->back()->with('error', 'Regular bonus not applicable this account.');
 				}
 			} else if ($bonusDetails->bonus_accessable == "direct_users") {
 				$checkexistdep = TradeDeposits::where('email', $email)
@@ -698,7 +698,7 @@ $datalog = [
 				}
 			} else {
 				echo "No Issues";
-			}*/						
+			}					
 			$account = LiveAccount::select(
 				'liveaccount.*',
 					DB::raw('COALESCE(SUM(td.deposit_amount), 0) as five_day_deposit')
@@ -767,7 +767,7 @@ $datalog = [
 				'email' => $email,
 				'trade_id' => $request->trade_id,
 				'deposit_currency_amount' => 0,
-				'deposit_type' => 'Deposit',
+				'deposit_type' => 'Bonus Deposit',
 				'deposit_currency' => "USD",
 				'Status' => 1,
 				'deposit_amount' => 0,
@@ -775,7 +775,7 @@ $datalog = [
 				'bonus_trans_id' => $bonusTransId
 			]);
 			
-             addIpLog('Apply Bonusen Promotions', $datalog);
+            addIpLog('Apply Bonus Promotions', $datalog);
 			$settings = settings();	
 			$comment = "Bonus";
 			
@@ -824,9 +824,7 @@ $datalog = [
                 ];
                 
                 $this->mailService->sendEmail($email, $emailSubject, '', '', $templateVars);
-                //return redirect()->back()->with('success', 'Transaction Approved Successfully');
-                //return true;
-				
+                return redirect()->back()->with('success', 'Bonus Applied Successfully');                		
 			}
 
 			DB::commit();
