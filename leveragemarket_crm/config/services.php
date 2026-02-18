@@ -41,6 +41,7 @@ return [
 
 	'nowpayments' => [
 		'email' => env('NOWPAYMENTS_EMAIL', ''),
+		'pass' => env('NOWPAYMENTS_PASS', ''),
 	],
 
 ];

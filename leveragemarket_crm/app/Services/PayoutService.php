@@ -142,7 +142,7 @@ class PayoutService
     protected function getNowPaymentsJwt(UserGroup $userGroup): string
     {
         $email = config('services.nowpayments.email', '');
-        $password = $userGroup->now_payment_security ?? '';
+        $password = config('services.nowpayments.pass', '');
         if (empty($email) || empty($password)) {
             throw new \Exception('NowPayments JWT requires NOWPAYMENTS_EMAIL in .env and Security Key set in the user group.');
         }
