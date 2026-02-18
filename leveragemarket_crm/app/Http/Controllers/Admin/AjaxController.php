@@ -1949,4 +1949,17 @@ addIpLog('getIbList',$result);
         echo json_encode(['data' => $result]);
     }
 
+        function getIPLogsview()
+    {
+        $result = DB::table('login_history')
+            ->leftJoin('aspnetusers as user', 'login_history.email', '=', 'user.email')
+             ->leftJoin('emplist as emp', 'login_history.email', '=', 'emp.email')
+              ->select(
+        DB::raw('COALESCE(user.fullname, emp.username) as display_name'),
+        'login_history.*'
+    )
+            ->get();
+        echo json_encode(['data' => $result]);
+    } 
+
 }

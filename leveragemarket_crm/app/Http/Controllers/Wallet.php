@@ -741,7 +741,7 @@ class Wallet extends Controller
 				DB::raw('deposit_type as particulars'),
 				DB::raw('deposit_amount as valamount')
 			])
-			->whereNotIn('deposit_type', ['Wallet Transfer', 'Wallet Payments', 'W2A Deposit', 'A2A Transfer'])
+			->whereNotIn('deposit_type', ['Wallet Transfer', 'Wallet Payments', 'W2A Deposit', 'A2A Transfer', 'Bonus Deposit'])
 			->where('email', $email);
 
 		$walletDeposit = DB::table('wallet_deposit')
@@ -809,38 +809,33 @@ class Wallet extends Controller
 			$tradeDeposittrans->whereBetween('deposted_date', [$from, $to]);
 			$walletDeposittrans->whereBetween('deposted_date', [$from, $to]);
 		}
-
+		
 		/* =========================================================
 		   UNION BUILD
 		========================================================== */
-		if ($type == 'Deposit') {
-			$union = $tradeDeposit->unionAll($walletDeposit);
-		}
-		elseif ($type == 'Withdrawal') {
-			$union = $withdraw;
-		}
-		elseif ($type == 'Transfer') {
-			$union = $walletDeposittrans->unionAll($tradeDeposittrans);
-		}
-		else {
+		
+		if ($paymode == 'Wallet Deposit') {
+			$union = $walletDeposit;
+		} elseif ($paymode == 'Trade Deposit'){
+			$union = $tradeDeposit;
+		} else {
 			$union = $tradeDeposit
 				->unionAll($walletDeposit)
 				->unionAll($withdraw)
 				//->unionAll($transfer)
 				->unionAll($walletDeposittrans)
 				->unionAll($tradeDeposittrans);
+		}	
+
+		$ledgerQuery = DB::query()->fromSub($union, 'ledger');		
+		if ($type) {
+			$ledgerQuery->where('transtype', $type);
 		}
-		
-		/* PAYMODE FILTER */		
-		if ($paymode == 'Wallet Deposit') {
-			$union = $walletDeposit;
-		} else 
-		
 
-		$ledgerQuery = DB::query()->fromSub($union, 'ledger');
-
-		
-		
+		/* PAYMODE FILTER */
+		if ($paymode && !in_array($paymode, ['Wallet Deposit','Trade Deposit'])) {
+			$ledgerQuery->where('particulars', $paymode);
+		}		
 
 		/* =========================================================
 		   PAGINATION
@@ -874,10 +869,8 @@ class Wallet extends Controller
 			+ DB::table('wallet_withdraw')
 			->where('email', $email)
 			->whereIn('withdraw_type', ['W2A Deposit'])
-			->sum('withdraw_amount');
-			
+			->sum('withdraw_amount');	
 		
-
 		return view('wallet_transactions', compact(
 			'user',
 			'ledger',

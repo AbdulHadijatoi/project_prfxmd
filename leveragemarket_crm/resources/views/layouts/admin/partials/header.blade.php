@@ -30,6 +30,7 @@ $current_permissions = session('current_permissions');
     <link id="style" href="/admin_assets/assets/libs/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/admin_assets/assets/css/styles.css?v={{ time() }}" rel="stylesheet">
     <link href="/admin_assets/assets/css/icons.css" rel="stylesheet">
+     <link href="/admin_assets/assets/css/user-activity-detail.css" rel="stylesheet">
     <link href="/admin_assets/assets/libs/node-waves/waves.min.css" rel="stylesheet">
     <link href="/admin_assets/assets/libs/simplebar/simplebar.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/admin_assets/assets/libs/flatpickr/flatpickr.min.css">

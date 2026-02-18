@@ -293,6 +293,7 @@ Route::prefix("/admin")->name("admin.")->group(function () {
         Route::post('/sendPasswordResetLink', [ClientController::class, 'sendPasswordResetLink'])->name('sendPasswordResetLink');
         Route::post('/updateAccLimit', [ClientController::class, 'updateAccLimit'])->name('updateAccLimit');
         Route::get('/ip_activity', [ClientController::class, 'activityLog']);
+          Route::get('/ip_activityview', [ClientController::class, 'activityLogview']);
 
         Route::prefix("/dd")->group(function () {
             Route::get("/users", [DDController::class, 'users']);

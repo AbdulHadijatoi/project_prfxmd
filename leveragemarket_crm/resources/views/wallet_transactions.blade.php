@@ -92,7 +92,7 @@
 										<option value="">All Type</option>
 										<option value="Deposit" {{ request('filter_type') == 'Deposit' ? 'selected' : '' }}>Deposit</option>
 										<option value="Withdrawal" {{ request('filter_type') == 'Withdrawal' ? 'selected' : '' }}>Withdrawal</option>
-										<option value="Transfer" {{ request('filter_type') == 'Transfer' ? 'selected' : '' }}>Transfer</option>
+										<option value="Internal Transfer" {{ request('filter_type') == 'Transfer' ? 'selected' : '' }}>Transfer</option>
 									</select>
 									
 									<select name="filter_paymode" class="fxtran-input">
@@ -111,9 +111,9 @@
 										<option value="External Withdrawal" {{ request('filter_paymode') == 'External Withdrawal' ? 'selected' : '' }}>External Withdrawal</option>
 										
 										<p>Transfer</p>
-										<option value="Wallet to Account" {{ request('filter_paymode') == 'Wallet to Account' ? 'selected' : '' }}>Wallet to Account</option>								
-										<option value="Account to Wallet" {{ request('filter_paymode') == 'Account to Wallet' ? 'selected' : '' }}>Account to Wallet</option>
-										<option value="Account to Account" {{ request('filter_paymode') == 'Account to Account' ? 'selected' : '' }}>Account to Account</option>
+										<option value="W2A Deposit" {{ request('filter_paymode') == 'W2A Deposit' ? 'selected' : '' }}>Wallet to Account</option>								
+										<option value="A2W withdraw" {{ request('filter_paymode') == 'A2W withdraw' ? 'selected' : '' }}>Account to Wallet</option>
+										<option value="A2A Transfer" {{ request('filter_paymode') == 'A2A Transfer' ? 'selected' : '' }}>Account to Account</option>
 										
 									</select>
 									

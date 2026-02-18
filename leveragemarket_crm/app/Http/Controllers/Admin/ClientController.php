@@ -818,4 +818,8 @@ public function updateAccLimit(Request $request)
     {
         return view("admin.ip_activity");
     }
+     public function activityLogview()
+    {
+        return view("admin.ip_activityview");
+    }
 }
