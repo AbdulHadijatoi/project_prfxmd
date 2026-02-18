@@ -154,7 +154,7 @@
                                                         </div>
                                                         @if (!empty($user_groups['now_payment_api']) && isset($user_groups['now_payment_status']) && $user_groups['now_payment_status'] == 1)
                                                             <div class="col-md-3 col-lg-4 col-xl-4">
-                                                                <div class="address-check trade-deposit-type border rounded">
+                                                                <div class="address-check border rounded">
                                                                     <div class="form-check">
                                                                         <input type="radio" name="withdraw_type"
                                                                             class="form-check-input input-primary wallet-withdraw"
@@ -521,6 +521,7 @@
                                                                                 </div>
                                                                             @else
                                                                                 <select name="client_bank" required
+                                                                                    id="nowpayment-wallet-account-select"
                                                                                     class="form-control fill nowpayment-wallet-select"
                                                                                     style="color:black;">
                                                                                     @foreach ($client_wallets as $bank)
@@ -533,6 +534,23 @@
                                                                                         </option>
                                                                                     @endforeach
                                                                                 </select>
+                                                                                <div id="nowpayment-wallet-address-hint" class="mt-2 small text-muted border border-success rounded p-2" style="display: none;">
+                                                                                    <span class="d-flex align-items-center">
+                                                                                        <i class="ti ti-circle-check text-success me-2 f-20"></i>
+                                                                                        <span><span class="text-muted">Address:</span> <span id="nowpayment-wallet-address-value"></span></span>
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-2">
+                                                                                    <div id="nowpayment-wallet-address-confirm-wrap" class="form-check mb-0" style="display: none;">
+                                                                                        <input type="checkbox" class="form-check-input" id="nowpayment-wallet-address-confirm">
+                                                                                        <label class="form-check-label small" for="nowpayment-wallet-address-confirm" style="cursor: pointer;">I confirm that the wallet address is correct.</label>
+                                                                                    </div>
+                                                                                    <small data-bs-toggle="modal"
+                                                                                        data-bs-target="#addWalletModal"
+                                                                                        style="color: var(--primary-color); cursor: pointer;">
+                                                                                        + Add another wallet
+                                                                                    </small>
+                                                                                </div>
                                                                             @endif
                                                                         </div>
                                                                     </div>
@@ -1021,6 +1039,17 @@
 					return false;
 				}
 			}
+			if (withdrawType === 'Now Payment') {
+				if (!$('#nowpayment-wallet-address-confirm').is(':checked')) {
+					e.preventDefault();
+					Swal.fire({
+						icon: 'warning',
+						title: 'Confirmation required',
+						text: 'Please confirm that the wallet address is correct.'
+					});
+					return false;
+				}
+			}
 			e.preventDefault();
 			
 			$btn.html(
@@ -1221,6 +1250,28 @@
 		}
 		$('#wallet-account-select').on('change', updateWalletAddressHint);
 		$(document).ready(updateWalletAddressHint);
+
+		// Now Payment wallet address hint (same as Crypto withdrawal)
+		function updateNowPaymentWalletAddressHint() {
+			var $select = $('#nowpayment-wallet-account-select');
+			var $hint = $('#nowpayment-wallet-address-hint');
+			var $confirmWrap = $('#nowpayment-wallet-address-confirm-wrap');
+			var $value = $('#nowpayment-wallet-address-value');
+			if ($select.length && $hint.length) {
+				var address = $select.find('option:selected').attr('data-address') || '';
+				if (address) {
+					$value.text(address);
+					$hint.show();
+					$confirmWrap.show();
+				} else {
+					$hint.hide();
+					$confirmWrap.hide();
+					$('#nowpayment-wallet-address-confirm').prop('checked', false);
+				}
+			}
+		}
+		$('#nowpayment-wallet-account-select').on('change', updateNowPaymentWalletAddressHint);
+		$(document).ready(updateNowPaymentWalletAddressHint);
 
 		// Bank account number hint below bank account dropdown (Bank withdrawal)
 		function updateBankAccountHint() {
