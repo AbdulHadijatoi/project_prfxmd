@@ -6,7 +6,6 @@ use App\Models\ClientWallets;
 use App\Models\PaymentLog;
 use App\Models\TotalBalance;
 use App\Models\User;
-use App\Models\UserGroup;
 use App\Models\WalletWithdraw;
 use Illuminate\Support\Facades\Http;
 
@@ -67,29 +66,23 @@ class PayoutService
             $walletId = $paymentTo;
         }
 
-        if ($paymentLog->payment_type === 'NowPayment') {
+        if ($paymentLog->payment_type === 'BinancePay') {
             $clientWallet = null;
             if ($paymentTo && is_numeric($paymentTo)) {
                 $clientWallet = ClientWallets::where('client_wallet_id', $paymentTo)->first();
             }
-            if (!$clientWallet || !$clientWallet->wallet_address) {
-                throw new \Exception('Wallet address could not be resolved for this withdrawal. Ensure payment_to is a valid client wallet.');
+            if (!$clientWallet || !$clientWallet->wallet_address || !$clientWallet->wallet_currency) {
+                throw new \Exception('Wallet address and currency could not be resolved for this withdrawal. Ensure payment_to is a valid client wallet.');
             }
-            $currency = $this->mapToNowPaymentsCurrency($clientWallet->wallet_currency ?? '', $clientWallet->wallet_network ?? '');
-            if (!$currency) {
-                throw new \Exception('Unsupported wallet currency/network for NowPayments. Supported examples: USDT+TRC20, USDT+ERC20.');
+            $address = $clientWallet->wallet_address;
+            $coin = strtoupper(trim($clientWallet->wallet_currency ?? ''));
+            $network = trim($clientWallet->wallet_network ?? '');
+            $apiKey = config('services.binance.api_key');
+            $secret = config('services.binance.secret');
+            if (empty($apiKey) || empty($secret)) {
+                throw new \Exception('Binance API key and secret are not configured. Set BINANCE_API_KEY and BINANCE_SECRET in .env.');
             }
-            $user = User::where('email', $email)->first();
-            $groupId = $user->group_id ?? null;
-            if (!$groupId) {
-                throw new \Exception('NowPayments is not configured for this user\'s group.');
-            }
-            $userGroup = UserGroup::find($groupId);
-            $apiKey = $userGroup->now_payment_api ?? null;
-            if (empty($apiKey)) {
-                throw new \Exception('NowPayments API key is not configured for this user\'s group.');
-            }
-            $payoutResponse = $this->createNowPaymentsPayout($paymentLog, $clientWallet->wallet_address, $currency, $userGroup);
+            $payoutResponse = $this->createBinanceWithdraw($paymentLog, $address, $coin, $amount, $network);
             $paymentLog->update([
                 'payment_res' => is_array($payoutResponse) ? json_encode($payoutResponse) : (string) $payoutResponse,
             ]);
@@ -122,92 +115,56 @@ class PayoutService
     }
 
     /**
-     * Map wallet_currency + wallet_network to NowPayments payout currency code.
-     */
-    protected function mapToNowPaymentsCurrency(string $walletCurrency, string $walletNetwork): ?string
-    {
-        $currency = strtolower(trim($walletCurrency));
-        $network = strtolower(trim(str_replace([' ', '-'], '', $walletNetwork)));
-        if (!$currency || !$network) {
-            return null;
-        }
-        return $currency . $network;
-    }
-
-    /**
-     * Get JWT for NowPayments Mass Payout API (auth with email + password).
+     * Create a single withdrawal to an external wallet address via Binance Capital Withdraw API.
      *
-     * @throws \Exception When email/password missing or auth fails
+     * @param PaymentLog $paymentLog
+     * @param string $address Recipient wallet address
+     * @param string $coin Uppercase currency (e.g. USDT, BNB)
+     * @param float $amount Amount to withdraw
+     * @param string $network Optional network (e.g. TRC20, ERC20); omit or empty for default
+     * @return array Decoded JSON response
+     * @throws \Exception On missing config, HTTP error, or API error
      */
-    protected function getNowPaymentsJwt(UserGroup $userGroup): string
+    protected function createBinanceWithdraw(PaymentLog $paymentLog, string $address, string $coin, float $amount, string $network = ''): array
     {
-        $email = config('services.nowpayments.email', '');
-        $password = config('services.nowpayments.pass', '');
-        if (empty($email) || empty($password)) {
-            throw new \Exception('NowPayments JWT requires NOWPAYMENTS_EMAIL in .env and Security Key set in the user group.');
+        $apiKey = config('services.binance.api_key');
+        $secret = config('services.binance.secret');
+        if (empty($apiKey) || empty($secret)) {
+            throw new \Exception('Binance API key and secret are not configured.');
         }
+
+        $recvWindow = 5000;
+        $params = [
+            'coin' => $coin,
+            'address' => $address,
+            'amount' => $amount,
+            'timestamp' => round(microtime(true) * 1000),
+            'recvWindow' => $recvWindow,
+            'withdrawOrderId' => 'wd_' . $paymentLog->payment_id,
+        ];
+        if ($network !== '') {
+            $params['network'] = $network;
+        }
+        ksort($params);
+        $queryString = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+        $signature = hash_hmac('sha256', $queryString, $secret);
+        $url = 'https://api.binance.com/sapi/v1/capital/withdraw/apply?' . $queryString . '&signature=' . $signature;
+
         $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-            'x-api-key' => $userGroup->now_payment_api,
-        ])->post('https://api.nowpayments.io/v1/auth', [
-            'email' => $email,
-            'password' => $password,
-        ]);
+            'X-MBX-APIKEY' => $apiKey,
+        ])->post($url);
+
         if (!$response->successful()) {
             $body = $response->json();
-            $message = $body['message'] ?? $body['err'] ?? $response->body();
-            throw new \Exception('NowPayments auth failed: ' . (is_string($message) ? $message : json_encode($message)));
+            $message = $body['msg'] ?? $body['message'] ?? $response->body();
+            throw new \Exception('Binance withdraw failed: ' . (is_string($message) ? $message : json_encode($message)));
         }
         $data = $response->json();
-        $token = $data['token'] ?? $data['access_token'] ?? null;
-        if (empty($token)) {
-            throw new \Exception('NowPayments auth did not return a token.');
+        if (isset($data['code']) && $data['code'] != 0) {
+            $message = $data['msg'] ?? json_encode($data);
+            throw new \Exception('Binance API error: ' . $message);
         }
-        return $token;
-    }
-
-    /**
-     * Create a payout via NowPayments API (batch format with a single withdrawal).
-     * Uses JWT Bearer token for authorization.
-     *
-     * @return array Decoded JSON response (contains id and withdrawals array)
-     * @throws \Exception On HTTP or API error
-     */
-    protected function createNowPaymentsPayout(PaymentLog $paymentLog, string $address, string $currency, UserGroup $userGroup): array
-    {
-        $jwt = $this->getNowPaymentsJwt($userGroup);
-        $settings = settings();
-        $baseUrl = $settings['copyright_site_name_text'] ?? '';
-        $withdrawal = [
-            'address' => $address,
-            'currency' => $currency,
-            'fiat_amount' => (float) $paymentLog->payment_amount,
-            'fiat_currency' => 'usd',
-            'unique_external_id' => (string) $paymentLog->payment_id,
-            'payout_description' => 'Wallet Withdrawal #' . $paymentLog->payment_id,
-        ];
-        if (!empty($baseUrl) && (str_contains($baseUrl, 'http://') || str_contains($baseUrl, 'https://'))) {
-            $callbackUrl = rtrim($baseUrl, '/') . '/payment-response?payout=1&payment_id=' . $paymentLog->payment_id;
-            $withdrawal['ipn_callback_url'] = $callbackUrl;
-        }
-        $payload = [
-            'withdrawals' => [$withdrawal],
-        ];
-        if (!empty($withdrawal['ipn_callback_url'] ?? null)) {
-            $payload['ipn_callback_url'] = $withdrawal['ipn_callback_url'];
-        }
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-            'x-api-key' => $userGroup->now_payment_api,
-            'Authorization' => 'Bearer ' . $jwt,
-        ])->post('https://api.nowpayments.io/v1/payout', $payload);
-
-        if (!$response->successful()) {
-            $body = $response->json();
-            $message = $body['message'] ?? $body['err'] ?? $response->body();
-            throw new \Exception(is_string($message) ? $message : json_encode($message));
-        }
-        return $response->json();
+        return $data;
     }
 
     /**

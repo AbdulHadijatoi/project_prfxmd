@@ -44,4 +44,9 @@ return [
 		'pass' => env('NOWPAYMENTS_PASS', ''),
 	],
 
+	'binance' => [
+		'api_key' => env('BINANCE_API_KEY', ''),
+		'secret' => env('BINANCE_SECRET', ''),
+	],
+
 ];
