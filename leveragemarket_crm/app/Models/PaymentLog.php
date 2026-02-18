@@ -15,6 +15,7 @@ class PaymentLog extends Model
         'payment_reference_id',
         'payment_status',
         'initiated_by',
+        'payment_to',
         'bonus_id',
         'trade_id',
         'log_status',

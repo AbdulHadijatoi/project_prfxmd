@@ -20,6 +20,7 @@ use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Log;
 use Validator;
 use App\Services\PusherService;
+use App\Services\PayoutService;
 use Illuminate\Support\Facades\Auth;
 use App\Models\WalletTransfer;
 
@@ -28,12 +29,14 @@ class Wallet extends Controller
     protected $settings;
     protected $paymentController;
     protected $pusherService;
+    protected $payoutService;
 
-    public function __construct(Payment $paymentController, PusherService $pusherService)
+    public function __construct(Payment $paymentController, PusherService $pusherService, PayoutService $payoutService)
     {
         $this->settings = settings();
         $this->paymentController = $paymentController;
         $this->pusherService = $pusherService;
+        $this->payoutService = $payoutService;
     }
     public function index()
     {
@@ -172,12 +175,14 @@ class Wallet extends Controller
           $user = auth()->user();	
         session()->forget('getPOotp');
         session()->forget('Wallet_Withdrawal_Otp');
+        session()->forget('Now_Payment_Otp');
         session()->forget('USDT_Withdrawal_Otp');
         session()->forget('Bank_Withdrawal_Otp');
         session()->forget('Other_Withdrawal_Otp');
         session()->forget('Bank_Details_Otp');
         session()->forget('Wallet_Creation_Otp');
         $email = auth()->user()->email;
+        $user_groups = UserGroup::find(session('user')['group_id'] ?? null);
         $client_wallets = ClientWallets::where('user_id', $email)
             ->where('status', 1)
             ->get();
@@ -202,7 +207,7 @@ class Wallet extends Controller
 				
         $walletBalance = (float) $total_wd - (float) $total_ww;
 			
-        return view('wallet_withdrawal', compact('client_wallets','user', 'client_banks', 'settings', 'liveaccount_details', 'totals', 'wallet_balance', 'walletBalance'));
+        return view('wallet_withdrawal', compact('client_wallets', 'user', 'client_banks', 'settings', 'liveaccount_details', 'totals', 'wallet_balance', 'walletBalance', 'user_groups'));
     }
     public function deposit(Request $request)
     {
@@ -522,6 +527,30 @@ class Wallet extends Controller
         if ($withdrawAmount > $walletBalance) {
             return redirect()->back()->with('error', 'Insufficient balance in your wallet.');
         }
+
+        if ($withdrawType === 'Now Payment') {
+            $wallet = ClientWallets::where('client_wallet_id', $clientBank)->where('user_id', $userEmail)->first();
+            $paymentTo = $wallet ? ($wallet->wallet_address ?? (string) $clientBank) : (string) $clientBank;
+            $paymentLog = $this->payoutService->createWithdrawalRequest($userEmail, (float) $withdrawAmount, $paymentTo, 'NowPayment');
+            addIpLog('Wallet Withdrawal NowPayment Request', [
+                'email' => $userEmail,
+                'withdraw_amount' => $withdrawAmount,
+                'payment_id' => $paymentLog->payment_id,
+            ]);
+            if ($withdrawAmount <= 200) {
+                $this->payoutService->approveWithdrawal($paymentLog->payment_id, false);
+                return redirect()->back()->with('success', 'Withdrawal approved. You will receive a confirmation email shortly.');
+            }
+            $pusherData = [
+                'type' => 'Wallet Withdrawal',
+                'message' => 'A NowPayment wallet withdrawal request of $' . $withdrawAmount . ' has been received from ' . session('user')['fullname'],
+                'link' => '/admin/wallet_withdrawal_details?id=pl_' . md5($paymentLog->payment_id),
+                'enc_id' => 'pl_' . md5($paymentLog->payment_id),
+            ];
+            $this->pusherService->sendPusherMessage($pusherData);
+            return redirect()->back()->with('success', 'Withdrawal request submitted. You will receive an email once it is processed.');
+        }
+
          $datalog = [
                      'email' => $userEmail,
             'withdraw_amount' => $withdrawAmount,
@@ -768,7 +797,7 @@ class Wallet extends Controller
 				DB::raw('withdraw_type as particulars'),
 				DB::raw('withdraw_amount as valamount')
 			])
-			->whereIn('withdraw_type', ['Wallet Withdrawal', 'External Withdrawal'])
+			->whereIn('withdraw_type', ['Wallet Withdrawal', 'Wallet Withdrawal (Admin)', 'External Withdrawal'])
 			->where('email', $email);
 
 		/* =========================================================
@@ -864,7 +893,7 @@ class Wallet extends Controller
 
 		$totalDebit = DB::table('wallet_withdraw')
 			->where('email', $email)
-			->whereIn('withdraw_type', ['Wallet Withdrawal', 'External Withdrawal'])
+			->whereIn('withdraw_type', ['Wallet Withdrawal', 'Wallet Withdrawal (Admin)', 'External Withdrawal'])
 			->sum('withdraw_amount');
 
 		$totalTransferCredit = DB::table('trade_withdrawal')

@@ -16,11 +16,14 @@ class WalletWithdraw extends Model
         'transaction_id',
         'Status',
         'wallet_id',
+        'payment_log_id',
+        'withdraw_date',
         'created_at',
         'updated_at',
         'admin_email',
         'client_bank',
         'wallet_id',
+        'AdminRemark',
     ];
     public function user()
     {
