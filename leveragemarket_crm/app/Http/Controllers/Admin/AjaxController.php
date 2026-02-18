@@ -416,32 +416,30 @@ class AjaxController extends Controller
                 'action' => ' <a class="btn btn-sm btn-primary" href="/admin/wallet_withdrawal_details?id=' . md5($row->id) . '">View</a>'
             ];
         }
-        // $rmConditionPl = app('permission')->appendRolePermissionsQry('trs', 'initiated_by') . " (1=1) ";
-        // $sqlPl = "SELECT md5(user.id) as enc_id, user.fullname as fullname, trs.payment_id as id, trs.payment_amount as withdraw_amount, trs.payment_type as withdraw_type, trs.payment_status, trs.initiated_by as email, trs.created_at as withdraw_date
-        //     FROM payment_logs trs
-        //     LEFT JOIN aspnetusers user ON user.email = trs.initiated_by
-        //     WHERE trs.payment_type = 'NowPayment' AND trs.payment_reference_id = 'Wallet Withdrawal' AND trs.payment_status IN ('Pending', 'Initiated') " . $rmConditionPl;
-        // $resultsPl = DB::select($sqlPl);
-
-        //  echo "<pre>";print_r(value: sqlPl );exit;
-        // foreach ($resultsPl as $row) {
-        //     $data[] = [
-        //         'email' => $row->email,
-        //         'enc_id' => $row->enc_id,
-        //         'fullname' => $row->fullname,
-        //         'amount' => '$' . round($row->withdraw_amount ?? 0),
-        //         'payment_mode' => 'Now Payment',
-        //         'withdraw_date' => $row->withdraw_date ?? '',
-        //         'approved_name' => null,
-        //         'status' => '<span class="badge bg-outline-primary">Pending</span>',
-        //         'action' => ' <a class="btn btn-sm btn-primary" href="/admin/wallet_withdrawal_details?id=pl_' . md5($row->id) . '">View</a>'
-        //     ];
-        // }
-        // usort($data, function ($a, $b) {
-        //     $da = $a['withdraw_date'] ?? '';
-        //     $db = $b['withdraw_date'] ?? '';
-        //     return strcmp($db, $da);
-        // });
+        $rmConditionPl = app('permission')->appendRolePermissionsQry('trs', 'initiated_by') . " (1=1) ";
+        $sqlPl = "SELECT md5(user.id) as enc_id, user.fullname as fullname, trs.payment_id as id, trs.payment_amount as withdraw_amount, trs.payment_type as withdraw_type, trs.payment_status, trs.initiated_by as email, trs.created_at as withdraw_date
+            FROM payment_logs trs
+            LEFT JOIN aspnetusers user ON user.email = trs.initiated_by
+            " . $rmConditionPl . " AND trs.payment_type = 'NowPayment' AND trs.payment_reference_id = 'Wallet Withdrawal' AND trs.payment_status IN ('Pending', 'Initiated') ";
+        $resultsPl = DB::select($sqlPl);
+        foreach ($resultsPl as $row) {
+            $data[] = [
+                'email' => $row->email,
+                'enc_id' => $row->enc_id,
+                'fullname' => $row->fullname,
+                'amount' => '$' . round($row->withdraw_amount ?? 0),
+                'payment_mode' => 'Now Payment',
+                'withdraw_date' => $row->withdraw_date ?? '',
+                'approved_name' => null,
+                'status' => '<span class="badge bg-outline-primary">Pending</span>',
+                'action' => ' <a class="btn btn-sm btn-primary" href="/admin/wallet_withdrawal_details?id=pl_' . md5($row->id) . '">View</a>'
+            ];
+        }
+        usort($data, function ($a, $b) {
+            $da = $a['withdraw_date'] ?? '';
+            $db = $b['withdraw_date'] ?? '';
+            return strcmp($db, $da);
+        });
         addIpLog('getWalletWithdrawal ', $data);
         echo json_encode(['data' => $data]);
     }
@@ -879,11 +877,11 @@ addIpLog('getWalletTransfer', $data);
                 'action' => ' <a class="btn btn-sm btn-primary" href="/admin/wallet_withdrawal_details?id=' . md5($row->id) . '">View</a>'
             ];
         }
-        $rmConditionPl = app('permission')->appendRolePermissionsQry('trs', 'initiated_by');
+        $rmConditionPl = app('permission')->appendRolePermissionsQry('trs', 'initiated_by') . " (1=1) ";
         $sqlPl = "SELECT trs.payment_id as id, trs.payment_amount as withdraw_amount, trs.initiated_by as email, trs.created_at as withdraw_date, md5(user.id) as enc_id, user.fullname as fullname
             FROM payment_logs trs
             LEFT JOIN aspnetusers user ON user.email = trs.initiated_by
-            WHERE trs.payment_type = 'NowPayment' AND trs.payment_reference_id = 'Wallet Withdrawal' AND trs.payment_status IN ('Pending', 'Initiated') " . $rmConditionPl . " order by trs.payment_id desc";
+            " . $rmConditionPl . " AND trs.payment_type = 'NowPayment' AND trs.payment_reference_id = 'Wallet Withdrawal' AND trs.payment_status IN ('Pending', 'Initiated') order by trs.payment_id desc";
         $resultsPl = DB::select($sqlPl);
         foreach ($resultsPl as $row) {
             $data[] = [
