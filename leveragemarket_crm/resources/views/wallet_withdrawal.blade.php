@@ -152,20 +152,20 @@
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        @if (!empty(config('services.binance.api_key')))
+                                                        @if (!empty($user_groups['now_payment_api']) && isset($user_groups['now_payment_status']) && $user_groups['now_payment_status'] == 1)
                                                             <div class="col-md-3 col-lg-4 col-xl-4">
                                                                 <div class="address-check border rounded">
                                                                     <div class="form-check">
                                                                         <input type="radio" name="withdraw_type"
                                                                             class="form-check-input input-primary wallet-withdraw"
-                                                                            id="option_binancepay_withdraw" value="1" data-type="BinancePay_Withdrawal">
-                                                                        <label class="form-check-label d-block" for="option_binancepay_withdraw">
+                                                                            id="option_nowpayment_withdraw" value="1" data-type="NowPayment_Withdrawal">
+                                                                        <label class="form-check-label d-block" for="option_nowpayment_withdraw">
                                                                             <span class="card-body p-2 d-block">
                                                                                 <span class="d-flex flex-wrap align-items-center justify-content-between">
-                                                                                    <span>Crypto Withdrawal (Binance Pay)</span>
+                                                                                    <span>Crypto Withdrawal</span>
                                                                                     <span>
                                                                                         <span class="h6 f-w-500 mb-1 d-block">
-                                                                                            <img src="/assets/images/binancepay.png" alt="Binance Pay" style="height: 30px;" onerror="this.style.display='none'">
+                                                                                            <img src="/assets/images/nowpayments-white.png" alt="Now Payment" style="height: 30px;">
                                                                                         </span>
                                                                                     </span>
                                                                                 </span>
@@ -493,12 +493,12 @@
                                                         </form>
                                                     </div>
 
-                                                    <div class="wallet-withdrawal BinancePay_Withdrawal" style="display:none">
+                                                    <div class="wallet-withdrawal NowPayment_Withdrawal" style="display:none">
                                                         <form method="post" style="padding:10px;"
                                                             class="md-float-material form-material withdrawForm">
                                                             @csrf
                                                             <div class="row">
-                                                                <input type="hidden" name="withdraw_type" value="Binance Pay">
+                                                                <input type="hidden" name="withdraw_type" value="Now Payment">
                                                                 <div class="col-12 mt-2">
                                                                     <div class="form-group row">
                                                                         <label class="col-lg-4 col-form-label">
@@ -521,8 +521,8 @@
                                                                                 </div>
                                                                             @else
                                                                                 <select name="client_bank" required
-                                                                                    id="binancepay-wallet-account-select"
-                                                                                    class="form-control fill binancepay-wallet-select"
+                                                                                    id="nowpayment-wallet-account-select"
+                                                                                    class="form-control fill nowpayment-wallet-select"
                                                                                     style="color:black;">
                                                                                     @foreach ($client_wallets as $bank)
                                                                                         <option
@@ -534,16 +534,16 @@
                                                                                         </option>
                                                                                     @endforeach
                                                                                 </select>
-                                                                                <div id="binancepay-wallet-address-hint" class="mt-2 small text-muted border border-success rounded p-2" style="display: none;">
+                                                                                <div id="nowpayment-wallet-address-hint" class="mt-2 small text-muted border border-success rounded p-2" style="display: none;">
                                                                                     <span class="d-flex align-items-center">
                                                                                         <i class="ti ti-circle-check text-success me-2 f-20"></i>
-                                                                                        <span><span class="text-muted">Address:</span> <span id="binancepay-wallet-address-value"></span></span>
+                                                                                        <span><span class="text-muted">Address:</span> <span id="nowpayment-wallet-address-value"></span></span>
                                                                                     </span>
                                                                                 </div>
                                                                                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-2">
-                                                                                    <div id="binancepay-wallet-address-confirm-wrap" class="form-check mb-0" style="display: none;">
-                                                                                        <input type="checkbox" class="form-check-input" id="binancepay-wallet-address-confirm">
-                                                                                        <label class="form-check-label small" for="binancepay-wallet-address-confirm" style="cursor: pointer;">I confirm that the wallet address is correct.</label>
+                                                                                    <div id="nowpayment-wallet-address-confirm-wrap" class="form-check mb-0" style="display: none;">
+                                                                                        <input type="checkbox" class="form-check-input" id="nowpayment-wallet-address-confirm">
+                                                                                        <label class="form-check-label small" for="nowpayment-wallet-address-confirm" style="cursor: pointer;">I confirm that the wallet address is correct.</label>
                                                                                     </div>
                                                                                     <small data-bs-toggle="modal"
                                                                                         data-bs-target="#addWalletModal"
@@ -593,10 +593,10 @@
                                                                         <label class="col-lg-4 col-form-label">Verification OTP :</label>
                                                                         <div class="col-lg-8">
                                                                             <div class="input-group mb-3">
-                                                                                <span class="input-group-text otp-req" data-type="Binance Pay">Send OTP</span>
+                                                                                <span class="input-group-text otp-req" data-type="Now Payment">Send OTP</span>
                                                                                 <input type="number"
                                                                                     class="form-control"
-                                                                                    name="otp" disabled required data-type="Binance Pay">
+                                                                                    name="otp" disabled required data-type="Now Payment">
                                                                                 <span class="input-group-text">
                                                                                     <i class="feather icon-info mb-auto mt-auto"
                                                                                         data-bs-toggle="tooltip"
@@ -1039,8 +1039,8 @@
 					return false;
 				}
 			}
-			if (withdrawType === 'Binance Pay') {
-				if (!$('#binancepay-wallet-address-confirm').is(':checked')) {
+			if (withdrawType === 'Now Payment') {
+				if (!$('#nowpayment-wallet-address-confirm').is(':checked')) {
 					e.preventDefault();
 					Swal.fire({
 						icon: 'warning',
@@ -1251,12 +1251,12 @@
 		$('#wallet-account-select').on('change', updateWalletAddressHint);
 		$(document).ready(updateWalletAddressHint);
 
-		// Binance Pay wallet address hint (same as Crypto withdrawal)
-		function updateBinancePayWalletAddressHint() {
-			var $select = $('#binancepay-wallet-account-select');
-			var $hint = $('#binancepay-wallet-address-hint');
-			var $confirmWrap = $('#binancepay-wallet-address-confirm-wrap');
-			var $value = $('#binancepay-wallet-address-value');
+		// Now Payment wallet address hint (same as Crypto withdrawal)
+		function updateNowPaymentWalletAddressHint() {
+			var $select = $('#nowpayment-wallet-account-select');
+			var $hint = $('#nowpayment-wallet-address-hint');
+			var $confirmWrap = $('#nowpayment-wallet-address-confirm-wrap');
+			var $value = $('#nowpayment-wallet-address-value');
 			if ($select.length && $hint.length) {
 				var address = $select.find('option:selected').attr('data-address') || '';
 				if (address) {
@@ -1266,12 +1266,12 @@
 				} else {
 					$hint.hide();
 					$confirmWrap.hide();
-					$('#binancepay-wallet-address-confirm').prop('checked', false);
+					$('#nowpayment-wallet-address-confirm').prop('checked', false);
 				}
 			}
 		}
-		$('#binancepay-wallet-account-select').on('change', updateBinancePayWalletAddressHint);
-		$(document).ready(updateBinancePayWalletAddressHint);
+		$('#nowpayment-wallet-account-select').on('change', updateNowPaymentWalletAddressHint);
+		$(document).ready(updateNowPaymentWalletAddressHint);
 
 		// Bank account number hint below bank account dropdown (Bank withdrawal)
 		function updateBankAccountHint() {

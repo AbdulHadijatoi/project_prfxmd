@@ -208,7 +208,7 @@
                                                 </div>
                                             </div>
                                             @endif
-                                            @if($details->withdraw_type=='Wallet Withdrawal' || $details->withdraw_type=='Now Payment (Pending)' || $details->withdraw_type=='Binance Pay (Pending)')
+                                            @if($details->withdraw_type=='Wallet Withdrawal' || $details->withdraw_type=='Now Payment (Pending)')
                                             <div class="d-flex align-items-center">
                                                 <div>
                                                     <div class="lh-1">

@@ -122,7 +122,7 @@ class Transaction extends Controller
                     'fullname' => $user ? $user->fullname : $paymentLog->initiated_by,
                     'number' => $user ? $user->number : '',
                     'withdraw_amount' => $paymentLog->payment_amount,
-                    'withdraw_type' => $paymentLog->payment_type === 'BinancePay' ? 'Binance Pay (Pending)' : ($paymentLog->payment_type === 'NowPayment' ? 'Now Payment (Pending)' : 'Crypto (Pending)'),
+                    'withdraw_type' => 'Now Payment (Pending)',
                     'withdraw_date' => $paymentLog->created_at ?? now(),
                     'Status' => 0,
                     'wallet_name' => $walletName,

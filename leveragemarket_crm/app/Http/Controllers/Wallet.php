@@ -528,11 +528,11 @@ class Wallet extends Controller
             return redirect()->back()->with('error', 'Insufficient balance in your wallet.');
         }
 
-        if ($withdrawType === 'Binance Pay') {
+        if ($withdrawType === 'Now Payment') {
             $wallet = ClientWallets::where('client_wallet_id', $clientBank)->where('user_id', $userEmail)->first();
             $paymentTo = (string) $clientBank;
-            $paymentLog = $this->payoutService->createWithdrawalRequest($userEmail, (float) $withdrawAmount, $paymentTo, 'BinancePay');
-            addIpLog('Wallet Withdrawal Binance Pay Request', [
+            $paymentLog = $this->payoutService->createWithdrawalRequest($userEmail, (float) $withdrawAmount, $paymentTo, 'NowPayment');
+            addIpLog('Wallet Withdrawal NowPayment Request', [
                 'email' => $userEmail,
                 'withdraw_amount' => $withdrawAmount,
                 'payment_id' => $paymentLog->payment_id,
@@ -547,7 +547,7 @@ class Wallet extends Controller
             }
             $pusherData = [
                 'type' => 'Wallet Withdrawal',
-                'message' => 'A Binance Pay wallet withdrawal request of $' . $withdrawAmount . ' has been received from ' . session('user')['fullname'],
+                'message' => 'A NowPayment wallet withdrawal request of $' . $withdrawAmount . ' has been received from ' . session('user')['fullname'],
                 'link' => '/admin/wallet_withdrawal_details?id=pl_' . md5($paymentLog->payment_id),
                 'enc_id' => 'pl_' . md5($paymentLog->payment_id),
             ];
